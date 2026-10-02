@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSessao } from './hooks/useSessao';
 import { useChamados } from './hooks/useChamados';
-import { configurado, supabase } from './lib/supabase';
+import { supabase } from './lib/supabase';
 import type { Catalogo, Pessoa } from './lib/tipos';
 import { Acesso } from './telas/Acesso';
 import { SemCadastro } from './telas/SemCadastro';
@@ -59,11 +59,6 @@ function Logado({ eu, userId, catalogo }: { eu: Pessoa; userId: string; catalogo
 
 export function App() {
   const estado = useSessao();
-
-  if (!configurado) {
-    return (<><Cabecalho /><main><div className="card auth"><h1>Configuração pendente</h1>
-      <p className="muted" style={{ margin: 0 }}>Defina VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY (veja .env.example).</p></div></main></>);
-  }
 
   switch (estado.fase) {
     case 'carregando': return (<><Cabecalho /><div className="carregando">Carregando…</div></>);

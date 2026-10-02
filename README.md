@@ -8,7 +8,6 @@ Stack: React 18 + Vite + TypeScript, Supabase (projeto ATLAS - INTEGRADO, schema
 
 ```bash
 npm install
-cp .env.example .env.local   # URL e chave publicável do Supabase
 npm run dev
 ```
 
@@ -26,7 +25,7 @@ npm run build                # build de produção
 ## Publicar na Vercel
 
 1. Importar o repositório na Vercel (framework: Vite; build `npm run build`; saída `dist`).
-2. Cadastrar `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` (valores em `.env.example`).
+2. Variáveis de ambiente são opcionais: o código já aponta para o projeto ATLAS - INTEGRADO (valores em `.env.example`).
 3. No Supabase, em Authentication → URL Configuration, incluir o domínio da Vercel em *Redirect URLs*.
 
 ## Liberar uma pessoa
