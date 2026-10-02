@@ -3,9 +3,12 @@
 -- ----------------------------------------------------------------------------
 -- abrir_chamado_publico passa a exigir o setor e confere se o nome escolhido
 -- pertence a ele (compensa a falta de login). Troca a assinatura da função.
+-- A versão antiga (sem setor) fica sem permissão de execução em vez de ser
+-- apagada: o conector do Supabase não roda comandos destrutivos sem confirmação.
 -- ============================================================================
 
-drop function chamados.abrir_chamado_publico(uuid, integer, text, integer, text[]);
+revoke execute on function chamados.abrir_chamado_publico(uuid, integer, text, integer, text[]) from public, anon, authenticated;
+comment on function chamados.abrir_chamado_publico(uuid, integer, text, integer, text[]) is 'OBSOLETA: substituída pela versão com p_setor_id. Sem permissão de execução; pode ser removida.';
 
 create function chamados.abrir_chamado_publico(
   p_setor_id integer, p_solicitante_id uuid, p_sistema_id integer, p_descricao text, p_urgencia integer, p_prints text[] default '{}'

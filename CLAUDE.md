@@ -57,6 +57,7 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
 - Escrita só por RPC `security definer` (`abrir_chamado`, `abrir_chamado_publico`, `assumir_chamado`, `resolver_chamado`, `reabrir_chamado`),
   com `search_path = ''` e retorno `jsonb` (padrão do projeto). O front logado só lê, filtrado por RLS.
 - `update`/`delete` sempre com `where`: o projeto usa a extensão `safeupdate`.
+- Comandos destrutivos (`drop`, `delete`, `truncate`) pelo conector do Supabase exigem confirmação humana e expiram em sessão sem confirmação: preferir `revoke`/desativar, ou rodar no SQL Editor do Supabase.
 - Protocolo `TI-0421`, `TI-0422`… gerado pelo banco (sequência `chamados.protocolo_seq`).
 - E-mails de pessoas são dado pessoal: ficam só no banco, nunca em migration ou commit.
 - Antes de aplicar migration: rodar `supabase/testes/rodar.sh` (precisa de Postgres local).
