@@ -12,9 +12,12 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
   - Controladoria: Raissa, Amanda, Sarah, Julia, Sophia
   - Jurídico: Tamira, Lanna, Flávia Luquélia, Suhiane, Joana Cláudia, Nicoly Sobral, Carlos Brandão
 
-## Telas
-- **Abrir chamado**: nome (vem do login), sistema, descrição, prints (até 3: clicar, arrastar ou Ctrl+V), urgência (Pode esperar / Atrapalha / Estou parado).
-- **Painel do time** (só devs): indicadores (em aberto, sem responsável, alguém parado, meus), fila com filtros, botões Assumir / Resolver / Reabrir, prints em miniatura com ampliação.
+## Perfis e telas
+Dois tipos de usuário (`chamados.pessoas.papel`): **Solicitante** e **Dev/Suporte** (`dev`).
+- **Abrir chamado** (todos): nome (vem do login), sistema, descrição, prints (até 3: clicar, arrastar ou Ctrl+V), urgência.
+- **Meus chamados** (solicitante): os próprios chamados com situação (Aguardando o time / Em andamento com X / Resolvido) e tempo.
+- **Painel do time** (dev/suporte): contagens (em aberto, sem responsável, muito urgente, meus), tempos (espera média sem responsável, mais antigo em aberto, tempo até assumir e até resolver nos últimos 30 dias), fila com coluna "Aberto há" (vermelho após 24 h), botões Assumir / Resolver / Reabrir, prints com ampliação.
+- **Analytics** (dev/suporte): período (7/30/90 dias/tudo); resolvidos por técnico (barras + em andamento + tempo médio); mapas de calor técnico × sistema e técnico × setor de quem abriu.
 
 ## Sistemas atendidos
 ATLAS JURIS, CRM, ATLAS RH, Atlas Consult, ATLAS Empresas, Atlas Trib, Rfast Mail, Agente WhatsApp, App Connect Valley, Site Feitosa Imóveis, Site do escritório, Outro / não sei.
@@ -23,13 +26,14 @@ ATLAS JURIS, CRM, ATLAS RH, Atlas Consult, ATLAS Empresas, Atlas Trib, Rfast Mai
 - `prototipo/index.html`: protótipo original (página única, referência visual e funcional).
 - `src/`: sistema de produção (React 18 + Vite + TypeScript).
   - `lib/supabase.ts` cliente (schema `chamados`); `lib/api.ts` chamadas ao banco; `lib/fila.ts` e `lib/formato.ts` regras puras (com testes).
-  - `telas/` Acesso, AbrirChamado, Painel, SemCadastro; `componentes/` prints, ampliação, urgência.
+  - `lib/analytics.ts` cálculos de tempo e produtividade (com testes).
+  - `telas/` Acesso, AbrirChamado, MeusChamados, Painel, Analytics, SemCadastro; `componentes/` prints, ampliação, urgência.
 - `supabase/migrations/`: banco. `supabase/testes/rodar.sh` testa permissões e regras num Postgres local.
 
 ## Regras
 - Toda a interface em português do Brasil.
 - Visual: fonte Geist (Geist Mono para protocolos), fundo #f6f7f9, cor principal azul #2b4bee; suportar tema claro e escuro.
-- Urgência sempre com cor + texto: verde (Pode esperar), âmbar (Atrapalha), vermelho (Estou parado).
+- Urgência em 4 níveis, sempre com cor + texto: verde (Não urgente), azul (Pouco urgente), âmbar (Urgente), vermelho (Muito urgente). No banco: 0 a 3.
 - Não alterar a lista de pessoas ou de sistemas sem confirmar comigo.
 - Antes de mudanças grandes, mostrar o plano e esperar aprovação.
 
@@ -49,5 +53,5 @@ ATLAS JURIS, CRM, ATLAS RH, Atlas Consult, ATLAS Empresas, Atlas Trib, Rfast Mai
 
 ## Regras de negócio
 - Solicitante vê só os próprios chamados; dev vê todos e tem o Painel do time.
-- Assumir: dev, chamado sem responsável e não resolvido. Resolver: só o responsável. Reabrir: qualquer dev; volta para "em andamento" com o mesmo responsável.
+- Assumir: dev, chamado sem responsável e não resolvido (grava `assumido_em`, base do "tempo até assumir"). Resolver: só o responsável. Reabrir: qualquer dev; volta para "em andamento" com o mesmo responsável.
 - Até 3 prints por chamado (PNG, JPG, WEBP, GIF; até 20 MB), gravados em `chamados-prints/<user_id>/…`.

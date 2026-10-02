@@ -1,6 +1,6 @@
 export type Papel = 'solicitante' | 'dev';
 export type Status = 'aberto' | 'andamento' | 'resolvido';
-export type Urgencia = 0 | 1 | 2;
+export type Urgencia = 0 | 1 | 2 | 3;
 
 export interface Setor { id: number; nome: string; ordem: number }
 export interface Pessoa { id: string; nome: string; setor_id: number | null; papel: Papel; ativo: boolean }
@@ -15,6 +15,7 @@ export interface Chamado {
   urgencia: Urgencia;
   status: Status;
   responsavel_id: string | null;
+  assumido_em: string | null;
   prints: string[];
   criado_em: string;
   atualizado_em: string;
@@ -27,5 +28,8 @@ export interface Catalogo {
   sistemas: Sistema[];
 }
 
-export const URGENCIAS = ['Pode esperar', 'Atrapalha', 'Estou parado'] as const;
-export const COR_URGENCIA = ['ok', 'warn', 'bad'] as const;
+export const URGENCIAS = ['Não urgente', 'Pouco urgente', 'Urgente', 'Muito urgente'] as const;
+export const COR_URGENCIA = ['ok', 'info', 'warn', 'bad'] as const;
+export const MUITO_URGENTE: Urgencia = 3;
+
+export const NOME_PAPEL: Record<Papel, string> = { dev: 'Dev/Suporte', solicitante: 'Solicitante' };

@@ -1,4 +1,4 @@
-import type { Chamado } from './tipos';
+import { MUITO_URGENTE, type Chamado } from './tipos';
 
 export type Filtro = 'abertos' | 'livres' | 'meus' | 'resolvidos';
 
@@ -33,7 +33,7 @@ export function indicadores(chamados: Chamado[], eu: string) {
   return {
     emAberto: abertos.length,
     semResponsavel: abertos.filter((c) => !c.responsavel_id).length,
-    alguemParado: abertos.filter((c) => c.urgencia === 2).length,
+    muitoUrgente: abertos.filter((c) => c.urgencia === MUITO_URGENTE).length,
     meus: abertos.filter((c) => c.responsavel_id === eu).length,
   };
 }

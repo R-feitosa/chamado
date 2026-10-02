@@ -11,9 +11,10 @@ interface Props {
   catalogo: Catalogo;
   ativa: boolean;
   onVerPainel?: () => void;
+  rotuloVer?: string;
 }
 
-export function AbrirChamado({ eu, userId, catalogo, ativa, onVerPainel }: Props) {
+export function AbrirChamado({ eu, userId, catalogo, ativa, onVerPainel, rotuloVer = 'Ver no painel do time' }: Props) {
   const [sistema, setSistema] = useState<number | null>(null);
   const [descricao, setDescricao] = useState('');
   const [urgencia, setUrgencia] = useState<Urgencia | null>(null);
@@ -76,7 +77,7 @@ export function AbrirChamado({ eu, userId, catalogo, ativa, onVerPainel }: Props
           </dl>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="btn sec" type="button" onClick={outro}>Abrir outro chamado</button>
-            {onVerPainel && <button className="btn pri" type="button" onClick={onVerPainel}>Ver no painel do time</button>}
+            {onVerPainel && <button className="btn pri" type="button" onClick={onVerPainel}>{rotuloVer}</button>}
           </div>
         </div>
       ) : (

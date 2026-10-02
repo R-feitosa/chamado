@@ -50,7 +50,7 @@ do $$ declare c chamados.chamados; begin
 end $$;
 select pg_temp.espera_erro($$select chamados.abrir_chamado(1, 'x', 0, array['outro-usuario/p.png'])$$, 'Print inválido');
 select pg_temp.espera_erro($$select chamados.abrir_chamado(1, '   ', 0)$$, 'chamados_descricao_check');
-select pg_temp.espera_erro($$select chamados.abrir_chamado(1, 'x', 3)$$, 'chamados_urgencia_check');
+select pg_temp.espera_erro($$select chamados.abrir_chamado(1, 'x', 4)$$, 'chamados_urgencia_check');
 select pg_temp.espera_erro($$select chamados.abrir_chamado(1, 'x', 0, array['00000000-0000-0000-0000-00000000000a/1','00000000-0000-0000-0000-00000000000a/2','00000000-0000-0000-0000-00000000000a/3','00000000-0000-0000-0000-00000000000a/4'])$$, 'chamados_prints_check');
 -- Escrita direta é proibida
 select pg_temp.espera_erro($$update chamados.chamados set status = 'resolvido'$$, 'permission denied');
@@ -65,7 +65,9 @@ do $$ begin if (select count(*) from chamados.chamados) <> 0 then raise exceptio
 -- 5. Dev vê tudo, assume; segundo dev não consegue assumir nem resolver
 select pg_temp.como('00000000-0000-0000-0000-00000000000b');
 do $$ begin if (select count(*) from chamados.chamados) <> 2 then raise exception 'Kaio não vê tudo'; end if; end $$;
+do $$ begin if (select assumido_em from chamados.chamados where protocolo = 'TI-0421') is not null then raise exception 'assumido_em antes de assumir'; end if; end $$;
 select chamados.assumir_chamado((select id from chamados.chamados where protocolo = 'TI-0421'))->>'status';
+do $$ begin if (select assumido_em from chamados.chamados where protocolo = 'TI-0421') is null then raise exception 'assumido_em não gravado'; end if; end $$;
 select pg_temp.como('00000000-0000-0000-0000-00000000000c');
 select pg_temp.espera_erro($$select chamados.assumir_chamado((select id from chamados.chamados where protocolo = 'TI-0421'))$$, 'já foi assumido');
 select pg_temp.espera_erro($$select chamados.resolver_chamado((select id from chamados.chamados where protocolo = 'TI-0421'))$$, 'Só o responsável');

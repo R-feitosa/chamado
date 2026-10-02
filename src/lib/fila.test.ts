@@ -4,14 +4,14 @@ import type { Chamado } from './tipos';
 
 const base: Chamado = {
   id: '', protocolo: '', descricao: 'x', solicitante_id: 's', sistema_id: 1, urgencia: 0, status: 'aberto',
-  responsavel_id: null, prints: [], criado_em: '2026-10-01T10:00:00Z', atualizado_em: '', resolvido_em: null,
+  responsavel_id: null, assumido_em: null, prints: [], criado_em: '2026-10-01T10:00:00Z', atualizado_em: '', resolvido_em: null,
 };
 const c = (p: Partial<Chamado>): Chamado => ({ ...base, ...p });
 
 const lista = [
   c({ id: 'a', urgencia: 0, criado_em: '2026-10-01T09:00:00Z' }),
-  c({ id: 'b', urgencia: 2, responsavel_id: 'kaio', status: 'andamento' }),
-  c({ id: 'c', urgencia: 2 }),
+  c({ id: 'b', urgencia: 3, responsavel_id: 'kaio', status: 'andamento' }),
+  c({ id: 'c', urgencia: 3 }),
   c({ id: 'd', urgencia: 0, criado_em: '2026-10-01T11:00:00Z' }),
   c({ id: 'e', urgencia: 1, responsavel_id: 'kaio', status: 'resolvido', resolvido_em: 'x' }),
 ];
@@ -31,5 +31,5 @@ describe('filtros', () => {
 
 describe('indicadores', () => {
   it('conta só os abertos', () =>
-    expect(indicadores(lista, 'kaio')).toEqual({ emAberto: 4, semResponsavel: 3, alguemParado: 2, meus: 1 }));
+    expect(indicadores(lista, 'kaio')).toEqual({ emAberto: 4, semResponsavel: 3, muitoUrgente: 2, meus: 1 }));
 });
