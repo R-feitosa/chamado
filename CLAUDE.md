@@ -13,14 +13,18 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
   - Jurídico: Tamira, Lanna, Flávia Luquélia, Suhiane, Joana Cláudia, Nicoly Sobral, Carlos Brandão
 
 ## Telas
-- **Abrir chamado**: nome (lista por setor), sistema, descrição, prints (até 3: clicar, arrastar ou Ctrl+V), urgência (Pode esperar / Atrapalha / Estou parado).
-- **Painel do time**: indicadores (em aberto, sem responsável, alguém parado, meus), fila com filtros, botões Assumir / Resolver / Reabrir, prints em miniatura com ampliação.
+- **Abrir chamado**: nome (vem do login), sistema, descrição, prints (até 3: clicar, arrastar ou Ctrl+V), urgência (Pode esperar / Atrapalha / Estou parado).
+- **Painel do time** (só devs): indicadores (em aberto, sem responsável, alguém parado, meus), fila com filtros, botões Assumir / Resolver / Reabrir, prints em miniatura com ampliação.
 
 ## Sistemas atendidos
 ATLAS JURIS, CRM, ATLAS RH, Atlas Consult, ATLAS Empresas, Atlas Trib, Rfast Mail, Agente WhatsApp, App Connect Valley, Site Feitosa Imóveis, Site do escritório, Outro / não sei.
 
 ## Arquivos
-- `index.html`: protótipo atual, página única sem build (HTML + CSS + JS no mesmo arquivo).
+- `prototipo/index.html`: protótipo original (página única, referência visual e funcional).
+- `src/`: sistema de produção (React 18 + Vite + TypeScript).
+  - `lib/supabase.ts` cliente (schema `chamados`); `lib/api.ts` chamadas ao banco; `lib/fila.ts` e `lib/formato.ts` regras puras (com testes).
+  - `telas/` Acesso, AbrirChamado, Painel, SemCadastro; `componentes/` prints, ampliação, urgência.
+- `supabase/migrations/`: banco. `supabase/testes/rodar.sh` testa permissões e regras num Postgres local.
 
 ## Regras
 - Toda a interface em português do Brasil.
@@ -29,10 +33,21 @@ ATLAS JURIS, CRM, ATLAS RH, Atlas Consult, ATLAS Empresas, Atlas Trib, Rfast Mai
 - Não alterar a lista de pessoas ou de sistemas sem confirmar comigo.
 - Antes de mudanças grandes, mostrar o plano e esperar aprovação.
 
-## Próximo passo previsto
-Transformar o protótipo em sistema de produção com login, na stack do grupo: React 18 + Vite + TypeScript + Supabase + Vercel.
+## Banco (Supabase)
+- Projeto **ATLAS - INTEGRADO** (`ashxrwwlcarvqdigoxsi`), compartilhado com os outros sistemas do grupo.
+- Tudo da Central fica no schema **`chamados`**. Não criar nada em `public` nem em outros schemas.
+  Únicas exceções, exigidas pelo Supabase: bucket privado `chamados-prints` (+ policies em `storage.objects`
+  filtradas por esse bucket) e `chamados.chamados` na publicação `supabase_realtime`.
+- Tabelas: `setores`, `pessoas` (nome, setor, papel solicitante/dev, e-mail de login), `sistemas`, `chamados`, `eventos` (histórico).
+- Login: o mesmo `auth.users` dos sistemas ATLAS. A pessoa é ligada à conta pelo e-mail no primeiro acesso
+  (`chamados.vincular_minha_conta`). Para liberar alguém: preencher `chamados.pessoas.email`.
+- Escrita só por RPC `security definer` (`abrir_chamado`, `assumir_chamado`, `resolver_chamado`, `reabrir_chamado`),
+  com `search_path = ''` e retorno `jsonb` (padrão do projeto). O front só lê, filtrado por RLS.
+- Protocolo `TI-0421`, `TI-0422`… gerado pelo banco (sequência `chamados.protocolo_seq`).
+- E-mails de pessoas são dado pessoal: ficam só no banco, nunca em migration ou commit.
+- Antes de aplicar migration: rodar `supabase/testes/rodar.sh` (precisa de Postgres local).
 
-## Observação técnica
-O protótipo foi feito para rodar como página publicada no Claude, onde usa `window.claude.use('db')` e `window.claude.use('assets')` para salvar chamados e prints.
-Aberto direto no navegador, sem esse ambiente, ele entra em "modo demonstração": tudo funciona, mas os chamados ficam só na tela e somem ao recarregar.
-Para produção, trocar essas duas chamadas por Supabase (tabela `chamados` e bucket de Storage `prints`).
+## Regras de negócio
+- Solicitante vê só os próprios chamados; dev vê todos e tem o Painel do time.
+- Assumir: dev, chamado sem responsável e não resolvido. Resolver: só o responsável. Reabrir: qualquer dev; volta para "em andamento" com o mesmo responsável.
+- Até 3 prints por chamado (PNG, JPG, WEBP, GIF; até 20 MB), gravados em `chamados-prints/<user_id>/…`.
