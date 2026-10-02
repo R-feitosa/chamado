@@ -18,8 +18,12 @@ export type SistemaHub =
   | 'legal_ops' | 'ponto' | 'rf_ops' | 'rh' | 'tributario' | 'valley';
 
 function navegador(ua: string): string {
-  const m = ua.match(/(Edg|OPR|Chrome|Firefox|Safari)\/(\d+)/);
-  const nome = m ? ({ Edg: 'Edge', OPR: 'Opera' } as Record<string, string>)[m[1]] ?? m[1] : 'Outro';
+  // Ordem importa: Edge e Opera também se anunciam como "Chrome", e o Chrome como "Safari".
+  const achado = ['Edg', 'OPR', 'Firefox', 'Chrome', 'Safari']
+    .map((n) => { const v = ua.match(new RegExp(`${n}/(\\d+)`)); return v ? [n, v[1]] : null; })
+    .find(Boolean);
+  const m = achado ? [null, ...achado] : null;
+  const nome = m ? ({ Edg: 'Edge', OPR: 'Opera' } as Record<string, string>)[m[1]!] ?? m[1]! : 'Outro';
   const so = /Windows/.test(ua) ? 'Windows' : /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Mac OS/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : '';
   return [m ? `${nome} ${m[2]}` : nome, so].filter(Boolean).join(' · ');
 }

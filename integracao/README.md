@@ -31,6 +31,11 @@ export function BotaoAbrirChamado() {
 
 Códigos: `academy`, `cash`, `consult`, `crm`, `hub`, `imoveis`, `juris`, `legal_ops`, `ponto`, `rf_ops`, `rh`, `tributario`, `valley`.
 
+## Onde já está instalado
+| Sistema | Repositório | Onde | Arquivo |
+|---|---|---|---|
+| Atlas Hub (`hub`) | Rfeitosagroup/atlas-hub | barra superior, ao lado de "Novo Cliente" | `src/lib/abrirChamado.js` (versão JS deste arquivo) |
+
 ## Regras e limites
 - Só gera link quem tem conta **ativa** em `acessos.usuarios`.
 - Até 20 links por hora por pessoa; contexto até 2 KB; URL da tela até 500 caracteres.
