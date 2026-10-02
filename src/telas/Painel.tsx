@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { agir, type Acao } from '../lib/api';
 import { FILTROS, indicadores, noFiltro, ordenar, type Filtro } from '../lib/fila';
-import { duracao, inicioDoPeriodo, tempoDaFila, temposMedios } from '../lib/analytics';
+import { duracao, inicioDoPeriodo, resolvidosNoPeriodo, tempoDaFila, temposMedios } from '../lib/analytics';
+import { formatoPct, situacaoPrazo, taxaAssumidoNoPrazo, taxaNoPrazo, textoPrazo } from '../lib/sla';
 import { hojePorExtenso, iniciais, mensagemErro, titulo } from '../lib/formato';
 import type { Catalogo, Chamado, Pessoa } from '../lib/tipos';
 import { MiniPrints } from '../componentes/MiniPrints';
@@ -10,7 +11,7 @@ import { Ampliar } from '../componentes/Ampliar';
 
 interface Props { eu: Pessoa; catalogo: Catalogo; chamados: Chamado[] }
 
-const DIA = 86_400_000;
+const fmt = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
 export function Painel({ eu, catalogo, chamados }: Props) {
   const [filtro, setFiltro] = useState<Filtro>('abertos');
@@ -23,9 +24,12 @@ export function Painel({ eu, catalogo, chamados }: Props) {
   const sistema = useMemo(() => new Map(catalogo.sistemas.map((s) => [s.id, s.nome])), [catalogo]);
 
   const agora = Date.now();
-  const k = indicadores(chamados, eu.id);
+  const k = indicadores(chamados, eu.id, agora);
+  const desde30 = inicioDoPeriodo('30', agora);
+  const noPrazo = taxaNoPrazo(resolvidosNoPeriodo(chamados, desde30));
+  const assumidosNoPrazo = taxaAssumidoNoPrazo(chamados.filter((c) => c.assumido_em && new Date(c.assumido_em).getTime() >= desde30));
   const fila = tempoDaFila(chamados, agora);
-  const t30 = temposMedios(chamados, inicioDoPeriodo('30', agora));
+  const t30 = temposMedios(chamados, desde30);
   const lista = ordenar(chamados.filter((c) => noFiltro(filtro, c, eu.id)));
 
   async function executar(acao: Acao, id: string) {
@@ -36,14 +40,14 @@ export function Painel({ eu, catalogo, chamados }: Props) {
   const contagens: [string, number, string][] = [
     ['Em aberto', k.emAberto, 'var(--accent)'],
     ['Sem responsável', k.semResponsavel, 'var(--warn)'],
-    ['Muito urgente', k.muitoUrgente, 'var(--bad)'],
+    ['Atrasados', k.atrasados, 'var(--bad)'],
     ['Meus', k.meus, 'var(--ok)'],
   ];
   const tempos: [string, string, string][] = [
     ['Espera sem responsável', duracao(fila.esperaMediaSemResponsavel), 'média dos que aguardam'],
     ['Mais antigo em aberto', duracao(fila.maisAntigo), 'desde a abertura'],
-    ['Tempo até assumir', duracao(t30.mediaAssumir), 'média · últimos 30 dias'],
-    ['Tempo até resolver', duracao(t30.mediaResolver), 'média · últimos 30 dias'],
+    ['Assumidos no prazo', formatoPct(assumidosNoPrazo), `média ${duracao(t30.mediaAssumir)} · 30 dias`],
+    ['Resolvidos no prazo', formatoPct(noPrazo), `média ${duracao(t30.mediaResolver)} · 30 dias`],
   ];
 
   return (
@@ -71,7 +75,7 @@ export function Painel({ eu, catalogo, chamados }: Props) {
             ))}
           </div>
         </div>
-        <div className="row head"><span>Protocolo</span><span>Chamado</span><span>Sistema</span><span>Urgência</span><span>Aberto há</span><span>Responsável</span></div>
+        <div className="row head"><span>Protocolo</span><span>Chamado</span><span>Sistema</span><span>Urgência</span><span>Prazo</span><span>Responsável</span></div>
         {!lista.length ? (
           <div className="empty">{chamados.length ? 'Nada neste filtro.' : 'Nenhum chamado ainda. Abra o primeiro na aba "Abrir chamado".'}</div>
         ) : lista.map((c) => {
@@ -81,6 +85,7 @@ export function Painel({ eu, catalogo, chamados }: Props) {
           const bloqueado = ocupado === c.id;
           const fim = res && c.resolvido_em ? new Date(c.resolvido_em).getTime() : agora;
           const idade = fim - new Date(c.criado_em).getTime();
+          const { situacao } = situacaoPrazo(c, agora);
           return (
             <div className="row" key={c.id}>
               <span className="mono muted id" style={{ fontSize: 13 }}>{c.protocolo}</span>
@@ -94,8 +99,9 @@ export function Painel({ eu, catalogo, chamados }: Props) {
               </div>
               <span className="sys">{sistema.get(c.sistema_id) ?? '—'}</span>
               <PilulaUrgencia u={c.urgencia} />
-              <span className={`idade${!res && idade > DIA ? ' velho' : ''}`} title={res ? 'Tempo total até resolver' : 'Tempo desde a abertura'}>
-                {duracao(idade)}
+              <span className={`prazo ${situacao}`} title={`Assumir até ${fmt(c.prazo_assumir_em)} · resolver até ${fmt(c.prazo_em)}`}>
+                {textoPrazo(c, agora)}
+                <small>{res ? `resolvido em ${duracao(idade)}` : `aberto há ${duracao(idade)}`}</small>
               </span>
               <div className="who">
                 {!resp ? (

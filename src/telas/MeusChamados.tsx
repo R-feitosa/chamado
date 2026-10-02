@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { duracao } from '../lib/analytics';
+import { situacaoPrazo, textoPrazo } from '../lib/sla';
 import { titulo } from '../lib/formato';
 import type { Catalogo, Chamado, Pessoa } from '../lib/tipos';
 import { PilulaUrgencia } from '../componentes/Urgencia';
@@ -37,7 +38,7 @@ export function MeusChamados({ eu, catalogo, chamados, onAbrir }: { eu: Pessoa; 
             ))}
           </div>
         </div>
-        <div className="row head"><span>Protocolo</span><span>Chamado</span><span>Sistema</span><span>Urgência</span><span>Tempo</span><span>Situação</span></div>
+        <div className="row head"><span>Protocolo</span><span>Chamado</span><span>Sistema</span><span>Urgência</span><span>Prazo</span><span>Situação</span></div>
         {!lista.length ? (
           <div className="empty">
             {meus.length ? 'Nada neste filtro.' : <>Você ainda não abriu chamados. <button type="button" className="mini go" onClick={onAbrir}>Abrir chamado</button></>}
@@ -56,7 +57,10 @@ export function MeusChamados({ eu, catalogo, chamados, onAbrir }: { eu: Pessoa; 
               </div>
               <span className="sys">{sistema.get(c.sistema_id) ?? '—'}</span>
               <PilulaUrgencia u={c.urgencia} />
-              <span className="idade" title={res ? 'Tempo total até resolver' : 'Tempo desde a abertura'}>{duracao(fim - new Date(c.criado_em).getTime())}</span>
+              <span className={`prazo ${situacaoPrazo(c, agora).situacao}`}>
+                {textoPrazo(c, agora)}
+                <small>{res ? `resolvido em ${duracao(fim - new Date(c.criado_em).getTime())}` : `resolver até ${new Date(c.prazo_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`}</small>
+              </span>
               <div>
                 {res ? <span className="pill u0"><i className="dot" />Resolvido</span>
                   : resp ? <><span className="pill" style={{ background: 'var(--accent-soft)', color: 'var(--accent-ink)' }}><i className="dot" />Em andamento</span><div className="sub" style={{ marginTop: 4 }}>com {resp}</div></>

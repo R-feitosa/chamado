@@ -89,7 +89,7 @@ label.lbl,.lbl{font-size:14px;font-weight:600;display:block}
 .fila{overflow:hidden}
 .fh{padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
 .fh h2{font-size:17px;font-weight:600}
-.row{display:grid;grid-template-columns:76px minmax(0,1fr) 120px 128px 80px 232px;gap:14px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line)}
+.row{display:grid;grid-template-columns:76px minmax(0,1fr) 112px 124px 168px 238px;gap:14px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line)}
 .row.head{padding:10px 20px;background:var(--soft);font-size:12px;font-weight:500;color:var(--ink3)}
 .row:last-child{border-bottom:none}
 .t{font-weight:500;line-height:21px}
@@ -119,7 +119,7 @@ label.lbl,.lbl{font-size:14px;font-weight:600;display:block}
 .lb img{max-width:100%;max-height:100%;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.4);background:#fff}
 .lb button{position:absolute;top:calc(16px + env(safe-area-inset-top,0px));right:16px;min-height:44px;padding:8px 16px;border-radius:12px;border:none;background:#fff;color:#0e1116;font-size:14px;font-weight:600;cursor:pointer}
 @media (max-width:980px){.wrap{grid-template-columns:minmax(0,1fr)}.side{position:static}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:760px){.row{grid-template-columns:minmax(0,1fr)}.row.head{display:none}.row .id{font-size:12px}.sis{grid-template-columns:repeat(2,minmax(0,1fr))}.seg{grid-template-columns:repeat(2,minmax(0,1fr))}.idade::before{content:'Aberto há ';}}
+@media (max-width:760px){.row{grid-template-columns:minmax(0,1fr)}.row.head{display:none}.row .id{font-size:12px}.sis{grid-template-columns:repeat(2,minmax(0,1fr))}.seg{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
 /* Acesso (login, primeiro acesso, nova senha) */
@@ -155,3 +155,22 @@ label.lbl,.lbl{font-size:14px;font-weight:600;display:block}
 .mapa td.tot,.mapa th.tot{font-weight:600;color:var(--ink)}
 .papel{font-size:12px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--soft);color:var(--ink2);white-space:nowrap}
 @media (max-width:760px){.tec{grid-template-columns:minmax(0,1fr) 48px}.tec .bar-col,.tec .opt{display:none}}
+
+/* Urgência com prazo e explicação */
+.seg.urg button{flex-direction:column;gap:2px;min-height:58px;padding:6px 8px}
+.seg.urg small{font-size:12px;color:var(--ink3);font-weight:400}
+.explica{margin:0;font-size:14px;line-height:20px;padding:10px 14px;border-radius:12px;color:var(--ink)}
+.explica.u0,.explica.u1,.explica.u2,.explica.u3{color:var(--ink)}
+.prazo{font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink2)}
+.prazo.perto{color:var(--warn);font-weight:600}
+.prazo.atrasado,.prazo.estourado{color:var(--bad);font-weight:600}
+.prazo.cumprido{color:var(--ok)}
+.prazo small{display:block;font-size:12px;color:var(--ink3);font-weight:400}
+/* O ✓ só aparece quando marcado (no tema escuro ficava visível em todas as opções). */
+.tile:not([aria-pressed="true"]) .chk svg,.step:not(.ok) .chk svg{visibility:hidden}
+.tec.grupo{grid-template-columns:170px 90px 90px minmax(0,1fr) minmax(0,1fr) 170px}
+@media (max-width:760px){.tec.grupo{grid-template-columns:minmax(0,1fr) 60px 70px 70px}}
+.kpis.tres{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:760px){.kpis.tres{grid-template-columns:minmax(0,1fr)}}
+.who .sub,.who div>div{white-space:nowrap}
+@media (max-width:760px){.tec.grupo{grid-template-columns:minmax(0,1fr) 40px 64px 64px;gap:10px}.tec.grupo>span:first-child{overflow-wrap:anywhere}}

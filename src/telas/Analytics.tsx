@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import {
   PERIODOS, duracao, inicioDoPeriodo, matriz, porTecnico, resolvidosNoPeriodo, temposMedios, type ChavePeriodo,
 } from '../lib/analytics';
-import type { Catalogo, Chamado } from '../lib/tipos';
+import { NOME_GRUPO, type Catalogo, type Chamado, type Grupo } from '../lib/tipos';
+import { formatoPct, taxaAssumidoNoPrazo, taxaNoPrazo } from '../lib/sla';
 
 interface Props { catalogo: Catalogo; chamados: Chamado[] }
 
@@ -74,11 +75,19 @@ export function Analytics({ catalogo, chamados }: Props) {
   const porSetor = matriz(resolvidos, (c) => pessoa.get(c.solicitante_id)?.setor_id ?? 'dev');
   const colSetores = [...catalogo.setores.map((s) => ({ chave: String(s.id), nome: s.nome })), { chave: 'dev', nome: 'Dev/Suporte' }];
 
-  const kpis: [string, string][] = [
-    ['Resolvidos', String(resolvidos.length)],
-    ['Em aberto agora', String(chamados.filter((c) => c.status !== 'resolvido').length)],
-    ['Tempo médio até assumir', duracao(tempos.mediaAssumir)],
-    ['Tempo médio até resolver', duracao(tempos.mediaResolver)],
+  const assumidos = chamados.filter((c) => c.assumido_em && new Date(c.assumido_em).getTime() >= desde);
+  const grupoDe = (c: Chamado): Grupo => catalogo.sistemas.find((s) => s.id === c.sistema_id)?.grupo ?? 'sistema';
+  const porGrupo = (['sistema', 'suporte'] as Grupo[]).map((g) => {
+    const res = resolvidos.filter((c) => grupoDe(c) === g), ass = assumidos.filter((c) => grupoDe(c) === g);
+    const t = temposMedios(chamados.filter((c) => grupoDe(c) === g), desde);
+    return { g, resolvidos: res.length, abertos: chamados.filter((c) => c.status !== 'resolvido' && grupoDe(c) === g).length,
+      assumirPct: taxaAssumidoNoPrazo(ass), resolverPct: taxaNoPrazo(res), ...t };
+  });
+
+  const kpis: [string, string, string][] = [
+    ['Resolvidos', String(resolvidos.length), `${chamados.filter((c) => c.status !== 'resolvido').length} em aberto agora`],
+    ['Assumidos no prazo', formatoPct(taxaAssumidoNoPrazo(assumidos)), `média ${duracao(tempos.mediaAssumir)}`],
+    ['Resolvidos no prazo', formatoPct(taxaNoPrazo(resolvidos)), `média ${duracao(tempos.mediaResolver)}`],
   ];
 
   return (
@@ -92,14 +101,31 @@ export function Analytics({ catalogo, chamados }: Props) {
         </div>
       </div>
 
-      <div className="kpis">
-        {kpis.map(([nome, v]) => <div key={nome} className="card kpi"><span>{nome}</span><b style={{ fontSize: 26 }}>{v}</b></div>)}
+      <div className="kpis tres">
+        {kpis.map(([nome, v, nota]) => <div key={nome} className="card kpi"><span>{nome}</span><b style={{ fontSize: 26 }}>{v}</b><small>{nota}</small></div>)}
+      </div>
+
+      <div className="secao">
+        <h2>Por tipo de demanda</h2>
+        <div className="card fila">
+          <div className="tec head grupo"><span>Tipo</span><span className="num">Resolvidos</span><span className="num opt">Em aberto</span><span className="num">Assumidos no prazo</span><span className="num">Resolvidos no prazo</span><span className="num opt">Média assumir · resolver</span></div>
+          {porGrupo.map((l) => (
+            <div className="tec grupo" key={l.g}>
+              <span style={{ fontWeight: 500 }}>{NOME_GRUPO[l.g]}</span>
+              <span className="num" style={{ fontWeight: 600 }}>{l.resolvidos}</span>
+              <span className="num opt">{l.abertos}</span>
+              <span className="num">{formatoPct(l.assumirPct)}</span>
+              <span className="num">{formatoPct(l.resolverPct)}</span>
+              <span className="num opt muted">{duracao(l.mediaAssumir)} · {duracao(l.mediaResolver)}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="secao">
         <h2>Resolvidos por técnico</h2>
         <div className="card fila">
-          <div className="tec head"><span>Técnico</span><span className="bar-col">Resolvidos</span><span className="num">Qtd.</span><span className="num opt">Em andamento</span><span className="num opt">Tempo médio</span></div>
+          <div className="tec head"><span>Técnico</span><span className="bar-col">Resolvidos</span><span className="num">Qtd.</span><span className="num opt">Resolvidos no prazo</span><span className="num opt">Tempo médio</span></div>
           {linhas.map((l) => {
             const nome = pessoa.get(l.id)?.nome ?? '—';
             return (
@@ -109,7 +135,7 @@ export function Analytics({ catalogo, chamados }: Props) {
                   <i style={{ width: l.resolvidos ? `${(l.resolvidos / maxRes) * 100}%` : 0 }} />
                 </span></span>
                 <span className="num" style={{ fontWeight: 600 }}>{l.resolvidos}</span>
-                <span className="num opt">{l.emAndamento}</span>
+                <span className="num opt">{formatoPct(taxaNoPrazo(resolvidos.filter((c) => c.responsavel_id === l.id)))}</span>
                 <span className="num opt muted">{duracao(l.mediaResolver)}</span>
               </div>
             );
@@ -121,7 +147,7 @@ export function Analytics({ catalogo, chamados }: Props) {
         colunas={catalogo.sistemas.map((s) => ({ chave: String(s.id), nome: s.nome }))} />
       <Mapa titulo="Por setor de quem abriu" tecnicos={tecnicos} m={porSetor} nome={nomeSetor} colunas={colSetores} />
       <p className="muted" style={{ fontSize: 13, marginTop: 16 }}>
-        Considera chamados resolvidos no período, atribuídos ao responsável no momento da resolução. Tempo médio: da abertura à resolução.
+        Considera chamados resolvidos no período, atribuídos ao responsável no momento da resolução. Tempo médio: da abertura à resolução. No prazo: dentro do SLA do tipo de demanda e da urgência (assumir e resolver contam a partir da abertura).
       </p>
     </section>
   );

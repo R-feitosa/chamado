@@ -10,14 +10,16 @@ export async function vincularConta(): Promise<Pessoa | null> {
 }
 
 export async function carregarCatalogo(): Promise<Catalogo> {
-  const [s, p, si] = await Promise.all([
+  const [s, p, si, u, pz] = await Promise.all([
     supabase.from('setores').select('*').order('ordem'),
     supabase.from('pessoas').select('id,nome,setor_id,papel,ativo').order('nome'),
     supabase.from('sistemas').select('*').order('ordem'),
+    supabase.from('urgencias').select('*').order('nivel'),
+    supabase.from('prazos').select('*'),
   ]);
-  const erro = s.error || p.error || si.error;
+  const erro = s.error || p.error || si.error || u.error || pz.error;
   if (erro) throw erro;
-  return { setores: s.data ?? [], pessoas: p.data ?? [], sistemas: si.data ?? [] };
+  return { setores: s.data ?? [], pessoas: p.data ?? [], sistemas: si.data ?? [], urgencias: u.data ?? [], prazos: pz.data ?? [] };
 }
 
 export async function listarChamados(): Promise<Chamado[]> {

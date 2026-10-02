@@ -1,4 +1,5 @@
 import { MUITO_URGENTE, type Chamado } from './tipos';
+import { atrasado } from './sla';
 
 export type Filtro = 'abertos' | 'livres' | 'meus' | 'resolvidos';
 
@@ -19,21 +20,25 @@ export function noFiltro(f: Filtro, c: Chamado, eu: string): boolean {
   }
 }
 
-/** Sem responsável primeiro; depois mais urgente; depois mais recente (regra do protótipo). */
+/** Sem responsável primeiro (pelo prazo de assumir); depois pelo prazo de resolver. Resolvidos: mais recentes. */
 export function ordenar(lista: Chamado[]): Chamado[] {
   return [...lista].sort((a, b) => {
+    const ra = a.status === 'resolvido', rb = b.status === 'resolvido';
+    if (ra !== rb) return ra ? 1 : -1;
+    if (ra) return (b.resolvido_em ?? '').localeCompare(a.resolvido_em ?? '');
     if (!a.responsavel_id !== !b.responsavel_id) return a.responsavel_id ? 1 : -1;
-    if (b.urgencia !== a.urgencia) return b.urgencia - a.urgencia;
-    return b.criado_em.localeCompare(a.criado_em);
+    const p = (c: Chamado) => (c.responsavel_id ? c.prazo_em : c.prazo_assumir_em);
+    return p(a).localeCompare(p(b));
   });
 }
 
-export function indicadores(chamados: Chamado[], eu: string) {
+export function indicadores(chamados: Chamado[], eu: string, agora = Date.now()) {
   const abertos = chamados.filter((c) => c.status !== 'resolvido');
   return {
     emAberto: abertos.length,
     semResponsavel: abertos.filter((c) => !c.responsavel_id).length,
     muitoUrgente: abertos.filter((c) => c.urgencia === MUITO_URGENTE).length,
     meus: abertos.filter((c) => c.responsavel_id === eu).length,
+    atrasados: abertos.filter((c) => atrasado(c, agora)).length,
   };
 }

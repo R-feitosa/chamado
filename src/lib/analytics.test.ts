@@ -7,7 +7,7 @@ const agora = new Date('2026-10-10T12:00:00Z').getTime();
 const iso = (horasAtras: number) => new Date(agora - horasAtras * H).toISOString();
 const base: Chamado = {
   id: '', protocolo: '', descricao: 'x', solicitante_id: 's', sistema_id: 1, urgencia: 0, status: 'aberto',
-  responsavel_id: null, assumido_em: null, prints: [], criado_em: iso(1), atualizado_em: '', resolvido_em: null,
+  responsavel_id: null, assumido_em: null, prazo_assumir_em: iso(0), prazo_em: iso(0), prints: [], criado_em: iso(1), atualizado_em: '', resolvido_em: null,
 };
 const c = (p: Partial<Chamado>): Chamado => ({ ...base, ...p });
 
@@ -27,6 +27,12 @@ describe('duracao', () => {
     expect(duracao(14 * H)).toBe('14 h');
     expect(duracao(52 * H)).toBe('2 d 4 h');
     expect(duracao(null)).toBe('—');
+  });
+  it('nunca mostra 60 min', () => {
+    expect(duracao(59.7 * 60_000)).toBe('1 h');
+    expect(duracao(2 * H + 59.7 * 60_000)).toBe('3 h');
+    expect(duracao(23.9 * H)).toBe('24 h');
+    expect(duracao(47.8 * H)).toBe('2 d');
   });
 });
 

@@ -8,12 +8,15 @@ const ms = (iso: string) => new Date(iso).getTime();
 export function duracao(t: number | null): string {
   if (t === null || !Number.isFinite(t)) return '—';
   if (t < MIN) return 'agora';
-  if (t < HORA) return `${Math.round(t / MIN)} min`;
+  // Arredonda uma vez na unidade exibida, para nunca mostrar "60 min" ou "2 h 60 min".
+  const min = Math.round(t / MIN);
+  if (min < 60) return `${min} min`;
   if (t < DIA) {
-    const h = Math.floor(t / HORA), m = Math.round((t % HORA) / MIN);
-    return m && h < 10 ? `${h} h ${m} min` : `${h} h`;
+    const h = Math.floor(min / 60), m = min % 60;
+    if (h >= 10 || !m) return `${Math.round(t / HORA)} h`;
+    return `${h} h ${m} min`;
   }
-  const d = Math.floor(t / DIA), h = Math.round((t % DIA) / HORA);
+  const horas = Math.round(t / HORA), d = Math.floor(horas / 24), h = horas % 24;
   return h ? `${d} d ${h} h` : `${d} d`;
 }
 
