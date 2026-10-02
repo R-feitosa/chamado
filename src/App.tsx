@@ -109,7 +109,10 @@ function Publico({ catalogo }: { catalogo: Catalogo }) {
 
 /** Time de dev/suporte logado. */
 function Dev({ eu, userId, catalogo }: { eu: Pessoa; userId: string; catalogo: Catalogo }) {
+  // Link do botão do hub vale mesmo com alguém do time logado: abre o formulário com a identidade do link.
+  const [convite, descartarConvite] = useConvite();
   const [tela, setTela] = useState<Tela>(() => {
+    if (tokenDaUrl(location.search)) return 'abrir';
     const t = telaDoEndereco(ABAS_DEV);
     return t === 'abrir' && !location.hash ? 'painel' : t;
   });
@@ -130,7 +133,12 @@ function Dev({ eu, userId, catalogo }: { eu: Pessoa; userId: string; catalogo: C
       <main>
         {conexao === 'caiu' && <div className="banner" role="status">A conexão com a base caiu. Recarregue a página.</div>}
         <div hidden={tela !== 'abrir'}>
-          <AbrirChamado quem={{ tipo: 'dev', eu, userId }} catalogo={catalogo} ativa={tela === 'abrir'} onVerPainel={() => ir('painel')} />
+          {convite.fase === 'erro' && <div className="banner" role="alert">{convite.mensagem}</div>}
+          {convite.fase === 'lendo' ? <div className="carregando">Conferindo o link…</div> : (
+            <AbrirChamado key={convite.fase} catalogo={catalogo} ativa={tela === 'abrir'} onVerPainel={() => ir('painel')}
+              quem={convite.fase === 'ok' ? { tipo: 'convite', token: convite.token, convite: convite.convite } : { tipo: 'dev', eu, userId }}
+              onConviteUsado={descartarConvite} />
+          )}
         </div>
         {tela === 'painel' && <Painel eu={eu} catalogo={catalogo} chamados={chamados} />}
         {tela === 'analytics' && <Analytics catalogo={catalogo} chamados={chamados} />}
