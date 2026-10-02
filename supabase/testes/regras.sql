@@ -149,24 +149,29 @@ do $$ declare cat jsonb; tam uuid; aldo uuid; ina uuid; c jsonb; i int; begin
   if jsonb_array_length(cat->'prazos') <> 8 or jsonb_array_length(cat->'sistemas') <> 15 then raise exception 'catálogo incompleto'; end if;
   select (p->>'id')::uuid into tam from jsonb_array_elements(cat->'pessoas') p where p->>'nome' = 'Tamira';
   -- ids de dev e de inativo (lidos como superusuário no reset abaixo seriam outra sessão; aqui vêm de função própria)
-  c := chamados.abrir_chamado_publico(tam, 13, 'Sem login: notebook', 1, array['publico/0b5f8e1e-1111-4a2b-9c3d-000000000001.png']);
+  c := chamados.abrir_chamado_publico(4, tam, 13, 'Sem login: notebook', 1, array['publico/0b5f8e1e-1111-4a2b-9c3d-000000000001.png']);
   if c->>'protocolo' is null or (c ? 'descricao') then raise exception 'retorno público'; end if;
   if (c->>'prazo_assumir_em')::timestamptz - (c->>'criado_em')::timestamptz <> interval '4 hours' then raise exception 'prazo suporte meio urgente'; end if;
   c := chamados.consultar_chamado(' ' || lower(c->>'protocolo') || ' ');
   if c->>'status' <> 'aberto' or (c ? 'descricao') or (c ? 'prints') or c->>'sistema' <> 'Computador / notebook' then raise exception 'consulta: %', c; end if;
   if chamados.consultar_chamado('TI-9999') is not null then raise exception 'consulta inexistente'; end if;
-  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(%L, 1, %L, 0, array[%L])', tam, 'x', 'publico/0b5f8e1e-1111-4a2b-9c3d-000000000001.png'), 'Print inválido');
-  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(%L, 1, %L, 0, array[%L])', tam, 'x', '00000000-0000-0000-0000-00000000000a/p1.png'), 'Print inválido');
-  for i in 1..4 loop perform chamados.abrir_chamado_publico(tam, 1, 'spam ' || i, 0); end loop;
-  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(%L, 1, %L, 0)', tam, 'sexto'), 'Muitos chamados');
+  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(4, %L, 1, %L, 0, array[%L])', tam, 'x', 'publico/0b5f8e1e-1111-4a2b-9c3d-000000000001.png'), 'Print inválido');
+  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(4, %L, 1, %L, 0, array[%L])', tam, 'x', '00000000-0000-0000-0000-00000000000a/p1.png'), 'Print inválido');
+  -- setor obrigatório e coerente com o nome
+  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(null, %L, 1, %L, 0)', tam, 'x'), 'Informe seu setor');
+  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(99, %L, 1, %L, 0)', tam, 'x'), 'Informe seu setor');
+  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(3, %L, 1, %L, 0)', tam, 'x'), 'não é do setor');
+  perform pg_temp.falha('select chamados.abrir_chamado_publico(4, null, 1, ''x'', 0)', 'Escolha seu nome');
+  for i in 1..4 loop perform chamados.abrir_chamado_publico(4, tam, 1, 'spam ' || i, 0); end loop;
+  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(4, %L, 1, %L, 0)', tam, 'sexto'), 'Muitos chamados');
 end $$;
 reset role;
 select pg_temp.como('');
 create temp table ids as select (select id from chamados.pessoas where nome = 'Aldo') aldo, (select id from chamados.pessoas where nome = 'Inativo Teste') ina;
 grant select on ids to anon;
 set role anon;
-select pg_temp.falha(format('select chamados.abrir_chamado_publico(%L, 1, %L, 0)', (select aldo from ids), 'x'), 'Escolha seu nome');
-select pg_temp.falha(format('select chamados.abrir_chamado_publico(%L, 1, %L, 0)', (select ina from ids), 'x'), 'Escolha seu nome');
+select pg_temp.falha(format('select chamados.abrir_chamado_publico(4, %L, 1, %L, 0)', (select aldo from ids), 'x'), 'Escolha seu nome');
+select pg_temp.falha(format('select chamados.abrir_chamado_publico(4, %L, 1, %L, 0)', (select ina from ids), 'x'), 'Escolha seu nome');
 select pg_temp.falha($q$select count(*) from chamados.chamados$q$, 'permission denied');
 select pg_temp.falha($q$select count(*) from chamados.pessoas$q$, 'permission denied');
 select pg_temp.falha($q$select chamados.abrir_chamado(1, 'x', 0)$q$, 'permission denied');

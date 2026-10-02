@@ -60,7 +60,7 @@ interface DadosChamado { sistemaId: number; descricao: string; urgencia: Urgenci
  * solicitante escolhido na lista, com prints na pasta publico/.
  */
 export async function abrirChamado(
-  quem: { userId: string } | { solicitanteId: string },
+  quem: { userId: string } | { setorId: number; solicitanteId: string },
   dados: DadosChamado,
 ): Promise<ChamadoAberto> {
   const logado = 'userId' in quem;
@@ -69,7 +69,7 @@ export async function abrirChamado(
     const base = { p_sistema_id: dados.sistemaId, p_descricao: dados.descricao, p_urgencia: dados.urgencia, p_prints: caminhos };
     const { data, error } = logado
       ? await supabase.rpc('abrir_chamado', base)
-      : await supabase.rpc('abrir_chamado_publico', { p_solicitante_id: quem.solicitanteId, ...base });
+      : await supabase.rpc('abrir_chamado_publico', { p_setor_id: quem.setorId, p_solicitante_id: quem.solicitanteId, ...base });
     if (error) throw error;
     const c = data as ChamadoAberto & { prints: number | string[] };
     return { ...c, prints: Array.isArray(c.prints) ? c.prints.length : c.prints };

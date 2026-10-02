@@ -18,17 +18,28 @@ interface Props {
 }
 
 const CHAVE_NOME = 'rfg-chamados-solicitante';
-function lembrado(): string {
-  try { return localStorage.getItem(CHAVE_NOME) ?? ''; } catch { return ''; }
+const CHAVE_SETOR = 'rfg-chamados-setor';
+function lembrado(chave: string): string {
+  try { return localStorage.getItem(chave) ?? ''; } catch { return ''; }
 }
 const fmt = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
 export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar }: Props) {
   const publico = quem.tipo === 'publico';
-  const [solicitanteId, setSolicitanteId] = useState(() => {
-    const id = publico ? lembrado() : '';
-    return catalogo.pessoas.some((p) => p.id === id) ? id : '';
+  // Sem login, setor e nome são obrigatórios e precisam combinar (o banco confere de novo).
+  const [setorId, setSetorId] = useState(() => {
+    const id = publico ? lembrado(CHAVE_SETOR) : '';
+    return catalogo.setores.some((s) => String(s.id) === id) ? id : '';
   });
+  const [solicitanteId, setSolicitanteId] = useState(() => {
+    const id = publico ? lembrado(CHAVE_NOME) : '';
+    return catalogo.pessoas.some((p) => p.id === id && String(p.setor_id) === setorId) ? id : '';
+  });
+  const pessoasDoSetor = catalogo.pessoas.filter((p) => String(p.setor_id) === setorId);
+  function trocarSetor(id: string) {
+    setSetorId(id);
+    if (!catalogo.pessoas.some((p) => p.id === solicitanteId && String(p.setor_id) === id)) setSolicitanteId('');
+  }
   const [sistema, setSistema] = useState<number | null>(null);
   const [descricao, setDescricao] = useState('');
   const [urgencia, setUrgencia] = useState<Urgencia | null>(URGENCIA_PADRAO);
@@ -37,11 +48,11 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar 
   const [erro, setErro] = useState('');
   const [enviado, setEnviado] = useState<ChamadoAberto | null>(null);
 
-  const eu = quem.tipo === 'dev' ? quem.eu : catalogo.pessoas.find((p) => p.id === solicitanteId);
-  const setor = catalogo.setores.find((s) => s.id === eu?.setor_id)?.nome;
-  const setoresComPessoas = catalogo.setores
-    .map((s) => ({ ...s, pessoas: catalogo.pessoas.filter((p) => p.setor_id === s.id) }))
-    .filter((s) => s.pessoas.length);
+  const eu = quem.tipo === 'dev' ? quem.eu : pessoasDoSetor.find((p) => p.id === solicitanteId);
+  const setor = quem.tipo === 'dev'
+    ? catalogo.setores.find((s) => s.id === eu?.setor_id)?.nome
+    : catalogo.setores.find((s) => String(s.id) === setorId)?.nome;
+  const setoresComPessoas = catalogo.setores.filter((s) => catalogo.pessoas.some((p) => p.setor_id === s.id));
   const grupos: [string, Sistema[]][] = [
     ['Sistemas (desenvolvimento)', catalogo.sistemas.filter((s) => s.ativo && s.grupo !== 'suporte')],
     ['Suporte técnico (computador, impressora, e-mail, acessos)', catalogo.sistemas.filter((s) => s.ativo && s.grupo === 'suporte')],
@@ -51,9 +62,10 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar 
   const prazoDe = (n: number | null) => (grupo === null || n === null ? undefined : catalogo.prazos.find((p) => p.grupo === grupo && p.nivel === n));
   const prazoAtual = prazoDe(urgencia);
   const nomeSistema = (id: number | null) => catalogo.sistemas.find((s) => s.id === id)?.nome ?? '';
-  const falta = [...(eu ? [] : ['seu nome']), ...faltando({ sistema, descricao, urgencia })];
+  const falta = [...(publico && !setorId ? ['seu setor'] : []), ...(eu ? [] : ['seu nome']), ...faltando({ sistema, descricao, urgencia })];
 
   const itens: [string, string][] = [
+    ...(publico ? [['Setor', setor ?? ''] as [string, string]] : []),
     ['Nome', eu?.nome ?? ''],
     ['Sistema', nomeSistema(sistema)],
     ['Descrição', descricao.trim() ? 'Preenchida' : ''],
@@ -67,9 +79,9 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar 
     setEnviando(true); setErro('');
     try {
       if (!eu) return;
-      const c = await abrirChamado(quem.tipo === 'dev' ? { userId: quem.userId } : { solicitanteId: eu.id },
+      const c = await abrirChamado(quem.tipo === 'dev' ? { userId: quem.userId } : { setorId: Number(setorId), solicitanteId: eu.id },
         { sistemaId: sistema, descricao, urgencia, arquivos: prints.map((p) => p.file) });
-      if (publico) { try { localStorage.setItem(CHAVE_NOME, eu.id); } catch { /* sem armazenamento: só não lembra */ } }
+      if (publico) { try { localStorage.setItem(CHAVE_SETOR, setorId); localStorage.setItem(CHAVE_NOME, eu.id); } catch { /* sem armazenamento: só não lembra */ } }
       setEnviado(c);
     } catch (err) {
       setErro(mensagemErro(err, 'Não foi possível enviar. Tente de novo.'));
@@ -100,7 +112,7 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar 
           </p>
           <dl>
             <dt>Protocolo</dt><dd className="mono" style={{ fontSize: 18 }}>{enviado.protocolo}</dd>
-            <dt>Aberto por</dt><dd>{eu?.nome}</dd>
+            <dt>Aberto por</dt><dd>{eu?.nome}{setor && <span className="muted"> · {setor}</span>}</dd>
             <dt>Onde</dt><dd>{nomeSistema(enviado.sistema_id)}</dd>
             <dt>Urgência</dt><dd>{URGENCIAS[enviado.urgencia]}</dd>
             <dt>Assumir até</dt><dd>{fmt(enviado.prazo_assumir_em)}</dd>
@@ -117,16 +129,21 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar 
         <form className="wrap" noValidate onSubmit={enviar}>
           <div className="card form">
             {publico ? (
-              <div className="grp">
-                <label className="lbl" htmlFor="nome">Seu nome</label>
-                <select className="field" id="nome" value={solicitanteId} onChange={(e) => setSolicitanteId(e.target.value)}>
-                  <option value="">Selecione seu nome</option>
-                  {setoresComPessoas.map((s) => (
-                    <optgroup key={s.id} label={s.nome}>
-                      {s.pessoas.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                    </optgroup>
-                  ))}
-                </select>
+              <div className="dupla">
+                <div className="grp">
+                  <label className="lbl" htmlFor="setor">Seu setor <span className="obrig" aria-hidden="true">*</span></label>
+                  <select className="field" id="setor" required value={setorId} onChange={(e) => trocarSetor(e.target.value)}>
+                    <option value="">Selecione o setor</option>
+                    {setoresComPessoas.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                  </select>
+                </div>
+                <div className="grp">
+                  <label className="lbl" htmlFor="nome">Seu nome <span className="obrig" aria-hidden="true">*</span></label>
+                  <select className="field" id="nome" required disabled={!setorId} value={solicitanteId} onChange={(e) => setSolicitanteId(e.target.value)}>
+                    <option value="">{setorId ? 'Selecione seu nome' : 'Escolha o setor primeiro'}</option>
+                    {pessoasDoSetor.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                  </select>
+                </div>
               </div>
             ) : (
               <div className="grp">
@@ -188,9 +205,9 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar 
           </div>
           <aside className="card side" aria-label="Resumo">
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <b style={{ fontSize: 14 }}>Seu chamado</b><span className="mono muted" style={{ fontSize: 13 }}>{feitos}/4</span>
+              <b style={{ fontSize: 14 }}>Seu chamado</b><span className="mono muted" style={{ fontSize: 13 }}>{feitos}/{itens.length}</span>
             </div>
-            <div className="bar"><i style={{ width: `${feitos * 25}%` }} /></div>
+            <div className="bar"><i style={{ width: `${(feitos / itens.length) * 100}%` }} /></div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {itens.map(([rotulo, valor]) => (
                 <div key={rotulo} className={`step${valor ? ' ok' : ''}`}>

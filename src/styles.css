@@ -181,3 +181,7 @@ label.lbl,.lbl{font-size:14px;font-weight:600;display:block}
 .entrar:hover{border-color:var(--accent)}
 .conta{flex-wrap:wrap;min-width:0}
 @media (max-width:520px){.entrar span{display:none}.conta .tabs .tab{padding:8px 10px}.top-in{padding:8px 16px}}
+.dupla{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.obrig{color:var(--bad);font-weight:600}
+.field:disabled{background:var(--soft);color:var(--ink3);cursor:not-allowed}
+@media (max-width:560px){.dupla{grid-template-columns:minmax(0,1fr)}}
