@@ -32,31 +32,64 @@ function extensao(f: File): string {
   return ({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' } as Record<string, string>)[f.type] ?? 'img';
 }
 
-/** Envia os prints, abre o chamado e, se a abertura falhar, apaga os prints enviados. */
-export async function abrirChamado(
-  userId: string,
-  dados: { sistemaId: number; descricao: string; urgencia: Urgencia; arquivos: File[] },
-): Promise<Chamado> {
+/** Catálogo do formulário para quem não está logado (só nome e setor dos solicitantes). */
+export async function carregarCatalogoPublico(): Promise<Catalogo> {
+  const { data, error } = await supabase.rpc('catalogo_publico');
+  if (error) throw error;
+  const c = data as Omit<Catalogo, 'pessoas'> & { pessoas: { id: string; nome: string; setor_id: number }[] };
+  return { ...c, pessoas: c.pessoas.map((p) => ({ ...p, papel: 'solicitante', ativo: true })) };
+}
+
+export interface ChamadoAberto { protocolo: string; sistema_id: number; urgencia: Urgencia; prints: number; prazo_assumir_em: string; prazo_em: string }
+
+async function enviarPrints(pasta: string, arquivos: File[]): Promise<string[]> {
   const caminhos: string[] = [];
-  try {
-    for (const f of dados.arquivos) {
-      const caminho = `${userId}/${crypto.randomUUID()}.${extensao(f)}`;
-      const { error } = await supabase.storage.from(BUCKET).upload(caminho, f, { contentType: f.type, upsert: false });
-      if (error) throw error;
-      caminhos.push(caminho);
-    }
-    const { data, error } = await supabase.rpc('abrir_chamado', {
-      p_sistema_id: dados.sistemaId,
-      p_descricao: dados.descricao,
-      p_urgencia: dados.urgencia,
-      p_prints: caminhos,
-    });
+  for (const f of arquivos) {
+    const caminho = `${pasta}/${crypto.randomUUID()}.${extensao(f)}`;
+    const { error } = await supabase.storage.from(BUCKET).upload(caminho, f, { contentType: f.type, upsert: false });
     if (error) throw error;
-    return data as Chamado;
+    caminhos.push(caminho);
+  }
+  return caminhos;
+}
+
+interface DadosChamado { sistemaId: number; descricao: string; urgencia: Urgencia; arquivos: File[] }
+
+/**
+ * Abre o chamado. Com login (time): em nome de quem está logado. Sem login: em nome do
+ * solicitante escolhido na lista, com prints na pasta publico/.
+ */
+export async function abrirChamado(
+  quem: { userId: string } | { solicitanteId: string },
+  dados: DadosChamado,
+): Promise<ChamadoAberto> {
+  const logado = 'userId' in quem;
+  const caminhos = await enviarPrints(logado ? quem.userId : 'publico', dados.arquivos);
+  try {
+    const base = { p_sistema_id: dados.sistemaId, p_descricao: dados.descricao, p_urgencia: dados.urgencia, p_prints: caminhos };
+    const { data, error } = logado
+      ? await supabase.rpc('abrir_chamado', base)
+      : await supabase.rpc('abrir_chamado_publico', { p_solicitante_id: quem.solicitanteId, ...base });
+    if (error) throw error;
+    const c = data as ChamadoAberto & { prints: number | string[] };
+    return { ...c, prints: Array.isArray(c.prints) ? c.prints.length : c.prints };
   } catch (e) {
-    if (caminhos.length) await supabase.storage.from(BUCKET).remove(caminhos).catch(() => undefined);
+    // Com login dá para apagar os prints órfãos; sem login, a pasta publico/ só aceita gravação.
+    if (logado && caminhos.length) await supabase.storage.from(BUCKET).remove(caminhos).catch(() => undefined);
     throw e;
   }
+}
+
+export interface Consulta {
+  protocolo: string; status: Chamado['status']; sistema: string; grupo: string; urgencia: Urgencia;
+  criado_em: string; assumido_em: string | null; resolvido_em: string | null;
+  prazo_assumir_em: string; prazo_em: string; responsavel: string | null;
+}
+
+export async function consultarChamado(protocolo: string): Promise<Consulta | null> {
+  const { data, error } = await supabase.rpc('consultar_chamado', { p_protocolo: protocolo });
+  if (error) throw error;
+  return (data as Consulta | null) ?? null;
 }
 
 export type Acao = 'assumir' | 'resolver' | 'reabrir';

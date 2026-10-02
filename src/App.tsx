@@ -6,66 +6,107 @@ import { NOME_PAPEL, type Catalogo, type Pessoa } from './lib/tipos';
 import { Acesso } from './telas/Acesso';
 import { SemCadastro } from './telas/SemCadastro';
 import { AbrirChamado } from './telas/AbrirChamado';
+import { Acompanhar } from './telas/Acompanhar';
 import { Painel } from './telas/Painel';
-import { MeusChamados } from './telas/MeusChamados';
 import { Analytics } from './telas/Analytics';
 
-type Tela = 'abrir' | 'meus' | 'painel' | 'analytics';
+type Tela = 'abrir' | 'acompanhar' | 'entrar' | 'painel' | 'analytics';
+type Aba = { tela: Tela; nome: string };
 
-const ABAS: Record<'dev' | 'solicitante', { tela: Tela; nome: string }[]> = {
-  dev: [{ tela: 'abrir', nome: 'Abrir chamado' }, { tela: 'painel', nome: 'Painel do time' }, { tela: 'analytics', nome: 'Analytics' }],
-  solicitante: [{ tela: 'abrir', nome: 'Abrir chamado' }, { tela: 'meus', nome: 'Meus chamados' }],
-};
+const ABAS_PUBLICAS: Aba[] = [{ tela: 'abrir', nome: 'Abrir chamado' }, { tela: 'acompanhar', nome: 'Acompanhar' }];
+const ABAS_DEV: Aba[] = [{ tela: 'abrir', nome: 'Abrir chamado' }, { tela: 'painel', nome: 'Painel do time' }, { tela: 'analytics', nome: 'Analytics' }];
 
-function Cabecalho({ children }: { children?: React.ReactNode }) {
+function telaDoEndereco(abas: Aba[], extra: Tela[] = []): Tela {
+  const h = location.hash.slice(1) as Tela;
+  return abas.some((a) => a.tela === h) || extra.includes(h) ? h : 'abrir';
+}
+
+function irPara(t: Tela, set: (t: Tela) => void) {
+  set(t); history.replaceState(null, '', t === 'abrir' ? location.pathname : `#${t}`); window.scrollTo(0, 0);
+}
+
+function Cabecalho({ abas, tela, onTela, contador, children }: {
+  abas?: Aba[]; tela?: Tela; onTela?: (t: Tela) => void; contador?: number; children?: React.ReactNode;
+}) {
   return (
     <header className="top">
       <div className="top-in">
         <div className="brand"><span className="mark">RFG</span><div><b>Central de chamados</b><small>R. Feitosa Group</small></div></div>
-        {children}
+        <div className="conta">
+          {abas && onTela && (
+            <div className="tabs" role="tablist" aria-label="Telas">
+              {abas.map((a) => (
+                <button key={a.tela} className="tab" role="tab" aria-selected={tela === a.tela} onClick={() => onTela(a.tela)}>
+                  {a.nome}{a.tela === 'painel' && contador !== undefined && <span className="n">{contador}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+          {children}
+        </div>
       </div>
     </header>
   );
 }
 
-function Logado({ eu, userId, catalogo }: { eu: Pessoa; userId: string; catalogo: Catalogo }) {
-  const dev = eu.papel === 'dev';
-  const abas = ABAS[eu.papel];
-  const inicial = abas.find((a) => `#${a.tela}` === location.hash)?.tela ?? 'abrir';
-  const [tela, setTela] = useState<Tela>(inicial);
+/** Sem login: abrir e acompanhar chamados; o time entra pelo botão. */
+function Publico({ catalogo }: { catalogo: Catalogo }) {
+  const [tela, setTela] = useState<Tela>(() => telaDoEndereco(ABAS_PUBLICAS, ['entrar']));
+  const [protocolo, setProtocolo] = useState('');
+  const ir = (t: Tela) => irPara(t, setTela);
+  return (
+    <>
+      <Cabecalho abas={ABAS_PUBLICAS} tela={tela} onTela={ir}>
+        {tela !== 'entrar' && (
+          <button type="button" className="entrar" onClick={() => ir('entrar')}><span>É dev/suporte? </span><b>Entrar</b></button>
+        )}
+      </Cabecalho>
+      <main>
+        <div hidden={tela !== 'abrir'}>
+          <AbrirChamado quem={{ tipo: 'publico' }} catalogo={catalogo} ativa={tela === 'abrir'}
+            onAcompanhar={(p) => { setProtocolo(p); ir('acompanhar'); }} />
+        </div>
+        {tela === 'acompanhar' && <Acompanhar key={protocolo} inicial={protocolo} />}
+        {tela === 'entrar' && (
+          <>
+            <Acesso />
+            <p style={{ textAlign: 'center', marginTop: 16 }}>
+              <button type="button" className="sair" onClick={() => ir('abrir')}>← Voltar para abrir chamado</button>
+            </p>
+          </>
+        )}
+      </main>
+    </>
+  );
+}
+
+/** Time de dev/suporte logado. */
+function Dev({ eu, userId, catalogo }: { eu: Pessoa; userId: string; catalogo: Catalogo }) {
+  const [tela, setTela] = useState<Tela>(() => {
+    const t = telaDoEndereco(ABAS_DEV);
+    return t === 'abrir' && !location.hash ? 'painel' : t;
+  });
   const { chamados, conexao } = useChamados();
   const [, setTique] = useState(0);
-  const abertos = chamados.filter((c) => c.status !== 'resolvido' && (dev || c.solicitante_id === eu.id)).length;
+  const abertos = chamados.filter((c) => c.status !== 'resolvido').length;
+  const ir = (t: Tela) => irPara(t, setTela);
 
-  // Atualiza os tempos ("aberto há") a cada minuto.
+  // Atualiza os tempos e prazos a cada minuto.
   useEffect(() => { const t = setInterval(() => setTique((n) => n + 1), 60_000); return () => clearInterval(t); }, []);
-
-  function irPara(t: Tela) { setTela(t); history.replaceState(null, '', t === 'abrir' ? '#' : `#${t}`); window.scrollTo(0, 0); }
 
   return (
     <>
-      <Cabecalho>
-        <div className="conta">
-          <div className="tabs" role="tablist" aria-label="Telas">
-            {abas.map((a) => (
-              <button key={a.tela} className="tab" role="tab" aria-selected={tela === a.tela} onClick={() => irPara(a.tela)}>
-                {a.nome}{(a.tela === 'painel' || a.tela === 'meus') && <span className="n">{abertos}</span>}
-              </button>
-            ))}
-          </div>
-          <span className="papel" title={eu.nome}>{eu.nome.split(' ')[0]} · {NOME_PAPEL[eu.papel]}</span>
-          <button className="sair" type="button" onClick={() => void supabase.auth.signOut()}>Sair</button>
-        </div>
+      <Cabecalho abas={ABAS_DEV} tela={tela} onTela={ir} contador={abertos}>
+        <span className="papel" title={eu.nome}>{eu.nome.split(' ')[0]} · {NOME_PAPEL[eu.papel]}</span>
+        <button className="sair" type="button" onClick={() => { history.replaceState(null, '', location.pathname); void supabase.auth.signOut(); }}>Sair</button>
       </Cabecalho>
       <main>
         {conexao === 'caiu' && <div className="banner" role="status">A conexão com a base caiu. Recarregue a página.</div>}
         <div hidden={tela !== 'abrir'}>
-          <AbrirChamado eu={eu} userId={userId} catalogo={catalogo} ativa={tela === 'abrir'}
-            onVerPainel={() => irPara(dev ? 'painel' : 'meus')} rotuloVer={dev ? 'Ver no painel do time' : 'Ver meus chamados'} />
+          <AbrirChamado quem={{ tipo: 'dev', eu, userId }} catalogo={catalogo} ativa={tela === 'abrir'} onVerPainel={() => ir('painel')} />
         </div>
-        {tela === 'meus' && <MeusChamados eu={eu} catalogo={catalogo} chamados={chamados} onAbrir={() => irPara('abrir')} />}
-        {dev && tela === 'painel' && <Painel eu={eu} catalogo={catalogo} chamados={chamados} />}
-        {dev && tela === 'analytics' && <Analytics catalogo={catalogo} chamados={chamados} />}
+        {tela === 'painel' && <Painel eu={eu} catalogo={catalogo} chamados={chamados} />}
+        {tela === 'analytics' && <Analytics catalogo={catalogo} chamados={chamados} />}
       </main>
     </>
   );
@@ -73,13 +114,12 @@ function Logado({ eu, userId, catalogo }: { eu: Pessoa; userId: string; catalogo
 
 export function App() {
   const estado = useSessao();
-
   switch (estado.fase) {
     case 'carregando': return (<><Cabecalho /><div className="carregando">Carregando…</div></>);
-    case 'deslogado': return (<><Cabecalho /><main><Acesso /></main></>);
+    case 'publico': return <Publico catalogo={estado.catalogo} />;
     case 'nova-senha': return (<><Cabecalho /><main><Acesso novaSenha /></main></>);
-    case 'sem-cadastro': return (<><Cabecalho /><main><SemCadastro email={estado.email} /></main></>);
+    case 'sem-acesso': return (<><Cabecalho /><main><SemCadastro email={estado.email} /></main></>);
     case 'erro': return (<><Cabecalho /><main><p className="erro">{estado.mensagem}</p></main></>);
-    case 'pronto': return <Logado key={estado.eu.id} eu={estado.eu} userId={estado.sessao.user.id} catalogo={estado.catalogo} />;
+    case 'dev': return <Dev key={estado.eu.id} eu={estado.eu} userId={estado.sessao.user.id} catalogo={estado.catalogo} />;
   }
 }

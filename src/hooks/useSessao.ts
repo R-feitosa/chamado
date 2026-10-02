@@ -1,45 +1,64 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { carregarCatalogo, vincularConta } from '../lib/api';
+import { carregarCatalogo, carregarCatalogoPublico, vincularConta } from '../lib/api';
 import type { Catalogo, Pessoa } from '../lib/tipos';
 
+/**
+ * Sem login: modo público (abre chamado escolhendo o nome na lista).
+ * Com login: só o time de dev/suporte usa; outras contas caem em 'sem-acesso'.
+ */
 export type EstadoSessao =
   | { fase: 'carregando' }
-  | { fase: 'deslogado' }
+  | { fase: 'publico'; catalogo: Catalogo }
   | { fase: 'nova-senha' }
-  | { fase: 'sem-cadastro'; email: string }
+  | { fase: 'sem-acesso'; email: string; catalogo: Catalogo }
   | { fase: 'erro'; mensagem: string }
-  | { fase: 'pronto'; sessao: Session; eu: Pessoa; catalogo: Catalogo };
+  | { fase: 'dev'; sessao: Session; eu: Pessoa; catalogo: Catalogo };
 
 export function useSessao(): EstadoSessao {
   const [estado, setEstado] = useState<EstadoSessao>({ fase: 'carregando' });
 
   useEffect(() => {
     let vivo = true;
-    let usuarioAtual: string | null = null;
+    let atual: string | null = null; // user id já processado, ou '' para o modo público
+
+    async function publico() {
+      if (atual === '') return;
+      atual = '';
+      try {
+        const catalogo = await carregarCatalogoPublico();
+        if (vivo && atual === '') setEstado({ fase: 'publico', catalogo });
+      } catch {
+        atual = null;
+        if (vivo) setEstado({ fase: 'erro', mensagem: 'Não foi possível carregar o formulário. Recarregue a página.' });
+      }
+    }
 
     async function entrar(sessao: Session) {
-      if (usuarioAtual === sessao.user.id) return; // renovação de token: nada muda
-      usuarioAtual = sessao.user.id;
+      if (atual === sessao.user.id) return; // renovação de token
+      atual = sessao.user.id;
       setEstado({ fase: 'carregando' });
       try {
         const eu = await vincularConta();
-        if (!vivo) return;
-        if (!eu) { setEstado({ fase: 'sem-cadastro', email: sessao.user.email ?? '' }); return; }
-        const catalogo = await carregarCatalogo();
-        if (vivo) setEstado({ fase: 'pronto', sessao, eu, catalogo });
+        if (!vivo || atual !== sessao.user.id) return;
+        if (eu?.papel === 'dev') {
+          const catalogo = await carregarCatalogo();
+          if (vivo) setEstado({ fase: 'dev', sessao, eu, catalogo });
+        } else {
+          const catalogo = await carregarCatalogoPublico();
+          if (vivo) setEstado({ fase: 'sem-acesso', email: sessao.user.email ?? '', catalogo });
+        }
       } catch {
-        usuarioAtual = null;
+        atual = null;
         if (vivo) setEstado({ fase: 'erro', mensagem: 'Não foi possível carregar seus dados. Recarregue a página.' });
       }
     }
 
     const { data: sub } = supabase.auth.onAuthStateChange((evento, sessao) => {
-      if (evento === 'PASSWORD_RECOVERY') { usuarioAtual = null; setEstado({ fase: 'nova-senha' }); return; }
-      if (!sessao) { usuarioAtual = null; setEstado({ fase: 'deslogado' }); return; }
+      if (evento === 'PASSWORD_RECOVERY') { atual = null; setEstado({ fase: 'nova-senha' }); return; }
       // Evita chamar o Supabase de dentro do callback (recomendação da biblioteca).
-      setTimeout(() => { if (vivo) void entrar(sessao); }, 0);
+      setTimeout(() => { if (vivo) void (sessao ? entrar(sessao) : publico()); }, 0);
     });
     return () => { vivo = false; sub.subscription.unsubscribe(); };
   }, []);

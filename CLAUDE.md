@@ -13,11 +13,13 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
   - Jurídico: Tamira, Lanna, Flávia Luquélia, Suhiane, Joana Cláudia, Nicoly Sobral, Carlos Brandão
 
 ## Perfis e telas
-Dois tipos de usuário (`chamados.pessoas.papel`): **Solicitante** e **Dev/Suporte** (`dev`).
-- **Abrir chamado** (todos): nome (vem do login), sistema, descrição, prints (até 3: clicar, arrastar ou Ctrl+V), urgência.
-- **Meus chamados** (solicitante): os próprios chamados com situação (Aguardando o time / Em andamento com X / Resolvido) e tempo.
-- **Painel do time** (dev/suporte): contagens (em aberto, sem responsável, muito urgente, meus), tempos (espera média sem responsável, mais antigo em aberto, tempo até resolver e % resolvidos no prazo nos últimos 30 dias), contagem de atrasados, fila com coluna "Prazo" (etapa atual: assumir em X / resolver em X / atrasado X, e há quanto tempo está aberto), botões Assumir / Resolver / Reabrir, prints com ampliação.
-- **Analytics** (dev/suporte): período (7/30/90 dias/tudo); % assumidos e resolvidos no prazo; comparação Desenvolvimento × Suporte técnico; resolvidos por técnico (barras + em andamento + tempo médio); mapas de calor técnico × sistema e técnico × setor de quem abriu.
+**Login só para o time de dev/suporte.** Quem abre chamado não faz login: o app abre direto no formulário.
+- **Abrir chamado** (sem login): nome escolhido na lista por setor (o navegador lembra a última escolha), onde está o problema, descrição, prints (até 3, 5 MB cada: clicar, arrastar ou Ctrl+V), urgência. Ao enviar, mostra o protocolo e os prazos.
+- **Acompanhar** (sem login): consulta pelo protocolo (aceita "TI-0422" ou "422"); mostra situação, onde, urgência, responsável (primeiro nome) e prazos. Nunca a descrição nem os prints.
+- **"É dev/suporte? Entrar"** no topo: login com a conta dos sistemas ATLAS. Conta que não é dev/suporte vê "O login é só para o time".
+- **Painel do time** (dev/suporte, tela inicial após o login): contagens (em aberto, sem responsável, atrasados, meus), tempos (espera média sem responsável, mais antigo em aberto, % assumidos e % resolvidos no prazo nos últimos 30 dias), fila com coluna "Prazo" (etapa atual: assumir em X / resolver em X / atrasado X, e há quanto tempo está aberto), botões Assumir / Resolver / Reabrir, prints com ampliação.
+- **Analytics** (dev/suporte): período (7/30/90 dias/tudo); % assumidos e resolvidos no prazo; comparação Desenvolvimento × Suporte técnico; resolvidos por técnico (barras + % no prazo + tempo médio); mapas de calor técnico × sistema e técnico × setor de quem abriu.
+- Dev logado também pode abrir chamado (em nome próprio).
 
 ## Sistemas atendidos
 - **Sistemas:** ATLAS JURIS, CRM, ATLAS RH, Atlas Consult, ATLAS Empresas, Atlas Trib, Rfast Mail, Agente WhatsApp, App Connect Valley, Site Feitosa Imóveis, Site do escritório, Outro / não sei.
@@ -29,7 +31,7 @@ Dois tipos de usuário (`chamados.pessoas.papel`): **Solicitante** e **Dev/Supor
 - `src/`: sistema de produção (React 18 + Vite + TypeScript).
   - `lib/supabase.ts` cliente (schema `chamados`); `lib/api.ts` chamadas ao banco; `lib/fila.ts` e `lib/formato.ts` regras puras (com testes).
   - `lib/analytics.ts` cálculos de tempo e produtividade; `lib/sla.ts` situação do prazo (com testes).
-  - `telas/` Acesso, AbrirChamado, MeusChamados, Painel, Analytics, SemCadastro; `componentes/` prints, ampliação, urgência.
+  - `telas/` AbrirChamado, Acompanhar, Acesso (login do time), Painel, Analytics, SemCadastro; `componentes/` prints, ampliação, urgência.
 - `supabase/migrations/`: banco. `supabase/testes/rodar.sh` testa permissões e regras num Postgres local.
 
 ## Regras
@@ -45,10 +47,16 @@ Dois tipos de usuário (`chamados.pessoas.papel`): **Solicitante** e **Dev/Supor
   Únicas exceções, exigidas pelo Supabase: bucket privado `chamados-prints` (+ policies em `storage.objects`
   filtradas por esse bucket) e `chamados.chamados` na publicação `supabase_realtime`.
 - Tabelas: `setores`, `pessoas` (nome, setor, papel solicitante/dev, e-mail de login), `sistemas`, `chamados`, `eventos` (histórico).
-- Login: o mesmo `auth.users` dos sistemas ATLAS. A pessoa é ligada à conta pelo e-mail no primeiro acesso
-  (`chamados.vincular_minha_conta`). Para liberar alguém: preencher `chamados.pessoas.email`.
-- Escrita só por RPC `security definer` (`abrir_chamado`, `assumir_chamado`, `resolver_chamado`, `reabrir_chamado`),
-  com `search_path = ''` e retorno `jsonb` (padrão do projeto). O front só lê, filtrado por RLS.
+- Login (só dev/suporte): o mesmo `auth.users` dos sistemas ATLAS, ligado à pessoa pelo e-mail no primeiro acesso
+  (`chamados.vincular_minha_conta`). Para liberar um dev: preencher `chamados.pessoas.email`.
+- Sem login (papel `anon`), só três funções, nenhuma tabela:
+  - `catalogo_publico()`: setores, nome e setor dos solicitantes ativos, sistemas, urgências e prazos (nunca e-mail);
+  - `abrir_chamado_publico(solicitante, …)`: só solicitante ativo da lista; limite de 5 por pessoa e 30 no total a cada 10 min; grava `origem = 'publico'`;
+  - `consultar_chamado(protocolo)`: situação, prazos e primeiro nome do responsável.
+  Prints sem login vão para `chamados-prints/publico/<uuid>.<ext>` (só gravação; leitura só do time). Limite do bucket: 5 MB.
+- Escrita só por RPC `security definer` (`abrir_chamado`, `abrir_chamado_publico`, `assumir_chamado`, `resolver_chamado`, `reabrir_chamado`),
+  com `search_path = ''` e retorno `jsonb` (padrão do projeto). O front logado só lê, filtrado por RLS.
+- `update`/`delete` sempre com `where`: o projeto usa a extensão `safeupdate`.
 - Protocolo `TI-0421`, `TI-0422`… gerado pelo banco (sequência `chamados.protocolo_seq`).
 - E-mails de pessoas são dado pessoal: ficam só no banco, nunca em migration ou commit.
 - Antes de aplicar migration: rodar `supabase/testes/rodar.sh` (precisa de Postgres local).
@@ -73,6 +81,6 @@ Dois tipos de usuário (`chamados.pessoas.papel`): **Solicitante** e **Dev/Supor
 - Indicadores: "Assumidos no prazo" e "Resolvidos no prazo" (%) no painel (30 dias) e no Analytics (geral, por tipo de demanda e, para resolver, por técnico).
 
 ### Fluxo
-- Solicitante vê só os próprios chamados; dev vê todos e tem o Painel do time.
+- Solicitante não faz login: abre pelo formulário e acompanha pelo protocolo. Dev/suporte faz login e vê todos os chamados.
 - Assumir: dev, chamado sem responsável e não resolvido (grava `assumido_em`, base do "tempo até assumir"). Resolver: só o responsável. Reabrir: qualquer dev; volta para "em andamento" com o mesmo responsável.
-- Até 3 prints por chamado (PNG, JPG, WEBP, GIF; até 20 MB), gravados em `chamados-prints/<user_id>/…`.
+- Até 3 prints por chamado (PNG, JPG, WEBP, GIF; até 5 MB), gravados em `chamados-prints/publico/…` (sem login) ou `chamados-prints/<user_id>/…` (dev logado).

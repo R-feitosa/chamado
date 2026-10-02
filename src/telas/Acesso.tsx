@@ -33,9 +33,9 @@ export function Acesso({ novaSenha = false }: { novaSenha?: boolean }) {
   return (
     <div className="card auth">
       <div>
-        <h1>{novaSenha ? 'Nova senha' : 'Entrar'}</h1>
+        <h1>{novaSenha ? 'Nova senha' : 'Entrar como dev/suporte'}</h1>
         <p className="muted" style={{ margin: '6px 0 0' }}>
-          {novaSenha ? 'Escolha a nova senha de acesso.' : 'Use o mesmo e-mail e senha dos sistemas ATLAS.'}
+          {novaSenha ? 'Escolha a nova senha de acesso.' : 'Acesso do time de dev/suporte, com o mesmo e-mail e senha dos sistemas ATLAS.'}
         </p>
       </div>
       <form onSubmit={enviar} noValidate>

@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Entre com o mesmo e-mail e senha dos sistemas ATLAS. O acesso só é liberado para quem tem o e-mail preenchido em `chamados.pessoas`.
+O app abre direto no formulário de chamado, sem login. O time de dev/suporte entra pelo botão "É dev/suporte? Entrar", com o mesmo e-mail e senha dos sistemas ATLAS (o e-mail precisa estar em `chamados.pessoas`, com papel `dev`).
 
 ## Verificações
 
@@ -28,7 +28,7 @@ npm run build                # build de produção
 2. Variáveis de ambiente são opcionais: o código já aponta para o projeto ATLAS - INTEGRADO (valores em `.env.example`).
 3. No Supabase, em Authentication → URL Configuration, incluir o domínio da Vercel em *Redirect URLs*.
 
-## Liberar uma pessoa
+## Liberar um dev/suporte
 
 ```sql
 update chamados.pessoas set email = 'nome@rfeitosa.com.br' where nome = 'Nome da lista';

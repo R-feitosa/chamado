@@ -36,7 +36,7 @@ export function faltando(c: { sistema: number | null; descricao: string; urgenci
 }
 
 export const MAX_PRINTS = 3;
-export const MAX_BYTES = 20 * 1024 * 1024;
+export const MAX_BYTES = 5 * 1024 * 1024;
 const TIPOS = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 
 /** Aplica as regras de anexo e devolve o que entra e a mensagem para o usuário. */
@@ -45,7 +45,7 @@ export function filtrarPrints(atuais: number, arquivos: { type: string; size: nu
   let msg = '';
   arquivos.forEach((f, i) => {
     if (!TIPOS.includes(f.type)) { msg = 'Só imagens (PNG, JPG, WEBP ou GIF).'; return; }
-    if (f.size > MAX_BYTES) { msg = 'Imagem acima de 20 MB.'; return; }
+    if (f.size > MAX_BYTES) { msg = 'Imagem acima de 5 MB. Recorte o print ou salve em JPG.'; return; }
     if (atuais + aceitos.length >= MAX_PRINTS) { msg = `Máximo de ${MAX_PRINTS} prints por chamado.`; return; }
     aceitos.push(i);
   });
@@ -59,6 +59,7 @@ export function mensagemErro(e: unknown, padrao = 'Não foi possível concluir. 
   if (/rate limit/i.test(m)) return 'Muitas tentativas. Aguarde alguns minutos.';
   if (/Failed to fetch|NetworkError/i.test(m)) return 'Sem conexão com o servidor. Verifique a internet.';
   // Mensagens das RPCs já estão em português.
-  if (/^(Só |Este chamado|Seu acesso|Print inválido)/.test(m)) return m;
+  if (/^(Só |Este chamado|Seu acesso|Print inválido|Escolha seu nome|Muitos chamados)/.test(m)) return m;
+  if (/exceeded the maximum allowed size|Payload too large/i.test(m)) return 'Um dos prints passa de 5 MB. Recorte a imagem e tente de novo.';
   return padrao;
 }

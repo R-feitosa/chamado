@@ -1,30 +1,47 @@
 import { useState, type FormEvent } from 'react';
-import { abrirChamado } from '../lib/api';
+import { abrirChamado, type ChamadoAberto } from '../lib/api';
 import { faltando, mensagemErro } from '../lib/formato';
-import { COR_URGENCIA, NOME_GRUPO, URGENCIAS, URGENCIA_PADRAO, type Catalogo, type Chamado, type Pessoa, type Sistema, type Urgencia } from '../lib/tipos';
+import { COR_URGENCIA, NOME_GRUPO, URGENCIAS, URGENCIA_PADRAO, type Catalogo, type Pessoa, type Sistema, type Urgencia } from '../lib/tipos';
 import { minutosPorExtenso } from '../lib/sla';
 import { AnexarPrints, type PrintLocal } from '../componentes/AnexarPrints';
 import { Check, Seta } from '../componentes/Icones';
 
+/** Com login (time): o nome vem da conta. Sem login: a pessoa escolhe o nome na lista. */
+export type Quem = { tipo: 'dev'; eu: Pessoa; userId: string } | { tipo: 'publico' };
+
 interface Props {
-  eu: Pessoa;
-  userId: string;
+  quem: Quem;
   catalogo: Catalogo;
   ativa: boolean;
   onVerPainel?: () => void;
-  rotuloVer?: string;
+  onAcompanhar?: (protocolo: string) => void;
 }
 
-export function AbrirChamado({ eu, userId, catalogo, ativa, onVerPainel, rotuloVer = 'Ver no painel do time' }: Props) {
+const CHAVE_NOME = 'rfg-chamados-solicitante';
+function lembrado(): string {
+  try { return localStorage.getItem(CHAVE_NOME) ?? ''; } catch { return ''; }
+}
+const fmt = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar }: Props) {
+  const publico = quem.tipo === 'publico';
+  const [solicitanteId, setSolicitanteId] = useState(() => {
+    const id = publico ? lembrado() : '';
+    return catalogo.pessoas.some((p) => p.id === id) ? id : '';
+  });
   const [sistema, setSistema] = useState<number | null>(null);
   const [descricao, setDescricao] = useState('');
   const [urgencia, setUrgencia] = useState<Urgencia | null>(URGENCIA_PADRAO);
   const [prints, setPrints] = useState<PrintLocal[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
-  const [enviado, setEnviado] = useState<Chamado | null>(null);
+  const [enviado, setEnviado] = useState<ChamadoAberto | null>(null);
 
-  const setor = catalogo.setores.find((s) => s.id === eu.setor_id)?.nome;
+  const eu = quem.tipo === 'dev' ? quem.eu : catalogo.pessoas.find((p) => p.id === solicitanteId);
+  const setor = catalogo.setores.find((s) => s.id === eu?.setor_id)?.nome;
+  const setoresComPessoas = catalogo.setores
+    .map((s) => ({ ...s, pessoas: catalogo.pessoas.filter((p) => p.setor_id === s.id) }))
+    .filter((s) => s.pessoas.length);
   const grupos: [string, Sistema[]][] = [
     ['Sistemas (desenvolvimento)', catalogo.sistemas.filter((s) => s.ativo && s.grupo !== 'suporte')],
     ['Suporte técnico (computador, impressora, e-mail, acessos)', catalogo.sistemas.filter((s) => s.ativo && s.grupo === 'suporte')],
@@ -34,10 +51,10 @@ export function AbrirChamado({ eu, userId, catalogo, ativa, onVerPainel, rotuloV
   const prazoDe = (n: number | null) => (grupo === null || n === null ? undefined : catalogo.prazos.find((p) => p.grupo === grupo && p.nivel === n));
   const prazoAtual = prazoDe(urgencia);
   const nomeSistema = (id: number | null) => catalogo.sistemas.find((s) => s.id === id)?.nome ?? '';
-  const falta = faltando({ sistema, descricao, urgencia });
+  const falta = [...(eu ? [] : ['seu nome']), ...faltando({ sistema, descricao, urgencia })];
 
   const itens: [string, string][] = [
-    ['Nome', eu.nome],
+    ['Nome', eu?.nome ?? ''],
     ['Sistema', nomeSistema(sistema)],
     ['Descrição', descricao.trim() ? 'Preenchida' : ''],
     ['Urgência', urgencia === null ? '' : URGENCIAS[urgencia]],
@@ -49,7 +66,10 @@ export function AbrirChamado({ eu, userId, catalogo, ativa, onVerPainel, rotuloV
     if (falta.length || enviando || sistema === null || urgencia === null) return;
     setEnviando(true); setErro('');
     try {
-      const c = await abrirChamado(userId, { sistemaId: sistema, descricao, urgencia, arquivos: prints.map((p) => p.file) });
+      if (!eu) return;
+      const c = await abrirChamado(quem.tipo === 'dev' ? { userId: quem.userId } : { solicitanteId: eu.id },
+        { sistemaId: sistema, descricao, urgencia, arquivos: prints.map((p) => p.file) });
+      if (publico) { try { localStorage.setItem(CHAVE_NOME, eu.id); } catch { /* sem armazenamento: só não lembra */ } }
       setEnviado(c);
     } catch (err) {
       setErro(mensagemErro(err, 'Não foi possível enviar. Tente de novo.'));
@@ -75,28 +95,47 @@ export function AbrirChamado({ eu, userId, catalogo, ativa, onVerPainel, rotuloV
         <div className="card done">
           <span className="pill u0" style={{ alignSelf: 'flex-start', fontSize: 13 }}>Chamado enviado</span>
           <h2 style={{ fontSize: 26, fontWeight: 600 }}>Recebemos seu chamado</h2>
-          <p className="muted" style={{ margin: 0 }}>O time foi avisado e já vê o chamado no painel.</p>
+          <p className="muted" style={{ margin: 0 }}>
+            O time foi avisado e já vê o chamado no painel.{publico && <> <b style={{ color: 'var(--ink)' }}>Guarde o protocolo</b> para acompanhar.</>}
+          </p>
           <dl>
-            <dt>Protocolo</dt><dd className="mono">{enviado.protocolo}</dd>
-            <dt>Aberto por</dt><dd>{eu.nome}</dd>
-            <dt>Sistema</dt><dd>{nomeSistema(enviado.sistema_id)}</dd>
+            <dt>Protocolo</dt><dd className="mono" style={{ fontSize: 18 }}>{enviado.protocolo}</dd>
+            <dt>Aberto por</dt><dd>{eu?.nome}</dd>
+            <dt>Onde</dt><dd>{nomeSistema(enviado.sistema_id)}</dd>
             <dt>Urgência</dt><dd>{URGENCIAS[enviado.urgencia]}</dd>
-            <dt>Prints</dt><dd>{enviado.prints.length ? `${enviado.prints.length} anexado${enviado.prints.length > 1 ? 's' : ''}` : 'Nenhum'}</dd>
+            <dt>Assumir até</dt><dd>{fmt(enviado.prazo_assumir_em)}</dd>
+            <dt>Resolver até</dt><dd>{fmt(enviado.prazo_em)}</dd>
+            <dt>Prints</dt><dd>{enviado.prints ? `${enviado.prints} anexado${enviado.prints > 1 ? 's' : ''}` : 'Nenhum'}</dd>
           </dl>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="btn sec" type="button" onClick={outro}>Abrir outro chamado</button>
-            {onVerPainel && <button className="btn pri" type="button" onClick={onVerPainel}>{rotuloVer}</button>}
+            {onVerPainel && <button className="btn pri" type="button" onClick={onVerPainel}>Ver no painel do time</button>}
+            {onAcompanhar && <button className="btn pri" type="button" onClick={() => onAcompanhar(enviado.protocolo)}>Acompanhar este chamado</button>}
           </div>
         </div>
       ) : (
         <form className="wrap" noValidate onSubmit={enviar}>
           <div className="card form">
-            <div className="grp">
-              <span className="lbl">Seu nome</span>
-              <div className="field" style={{ display: 'flex', alignItems: 'center', background: 'var(--soft)' }}>
-                {eu.nome}{setor && <span className="muted">&nbsp;· {setor}</span>}
+            {publico ? (
+              <div className="grp">
+                <label className="lbl" htmlFor="nome">Seu nome</label>
+                <select className="field" id="nome" value={solicitanteId} onChange={(e) => setSolicitanteId(e.target.value)}>
+                  <option value="">Selecione seu nome</option>
+                  {setoresComPessoas.map((s) => (
+                    <optgroup key={s.id} label={s.nome}>
+                      {s.pessoas.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                    </optgroup>
+                  ))}
+                </select>
               </div>
-            </div>
+            ) : (
+              <div className="grp">
+                <span className="lbl">Seu nome</span>
+                <div className="field" style={{ display: 'flex', alignItems: 'center', background: 'var(--soft)' }}>
+                  {eu?.nome}{setor && <span className="muted">&nbsp;· {setor}</span>}
+                </div>
+              </div>
+            )}
             <div className="grp">
               <span className="lbl">Onde está o problema?</span>
               {grupos.filter(([, lista]) => lista.length).map(([nomeGrupo, lista]) => (

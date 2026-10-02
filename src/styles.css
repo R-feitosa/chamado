@@ -174,3 +174,10 @@ label.lbl,.lbl{font-size:14px;font-weight:600;display:block}
 @media (max-width:760px){.kpis.tres{grid-template-columns:minmax(0,1fr)}}
 .who .sub,.who div>div{white-space:nowrap}
 @media (max-width:760px){.tec.grupo{grid-template-columns:minmax(0,1fr) 40px 64px 64px;gap:10px}.tec.grupo>span:first-child{overflow-wrap:anywhere}}
+.pill.andamento{background:var(--accent-soft);color:var(--accent-ink)}
+.pill.aguardando{background:var(--soft);color:var(--ink2)}
+.entrar{border:1px solid var(--line);background:var(--surface);color:var(--ink2);font-size:13px;font-weight:500;border-radius:10px;min-height:40px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.entrar b{color:var(--accent-ink);font-weight:600}
+.entrar:hover{border-color:var(--accent)}
+.conta{flex-wrap:wrap;min-width:0}
+@media (max-width:520px){.entrar span{display:none}.conta .tabs .tab{padding:8px 10px}.top-in{padding:8px 16px}}

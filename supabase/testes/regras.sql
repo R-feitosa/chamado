@@ -129,4 +129,56 @@ do $$ declare n int; begin
   if n <> 1 then raise exception 'não apagou órfão'; end if;
 end $$;
 reset role;
+-- 12. Abertura sem login (anon)
+reset role;
+insert into chamados.pessoas (nome, setor_id, papel, ativo) values ('Inativo Teste', 4, 'solicitante', false);
+set role anon;
+select pg_temp.como('');
+create function pg_temp.falha(sqltxt text, trecho text) returns void language plpgsql as $f$
+begin
+  begin execute sqltxt; exception when others then
+    if position(trecho in sqlerrm) = 0 then raise exception 'Erro inesperado: %', sqlerrm; end if;
+    raise notice 'ok (bloqueado): %', trecho; return;
+  end;
+  raise exception 'Deveria ter falhado: %', sqltxt;
+end $f$;
+do $$ declare cat jsonb; tam uuid; aldo uuid; ina uuid; c jsonb; i int; begin
+  cat := chamados.catalogo_publico();
+  if jsonb_array_length(cat->'pessoas') <> 16 then raise exception 'catálogo deve ter os 16 solicitantes ativos: %', jsonb_array_length(cat->'pessoas'); end if;
+  if (cat->'pessoas'->0) ? 'email' then raise exception 'catálogo expõe e-mail'; end if;
+  if jsonb_array_length(cat->'prazos') <> 8 or jsonb_array_length(cat->'sistemas') <> 15 then raise exception 'catálogo incompleto'; end if;
+  select (p->>'id')::uuid into tam from jsonb_array_elements(cat->'pessoas') p where p->>'nome' = 'Tamira';
+  -- ids de dev e de inativo (lidos como superusuário no reset abaixo seriam outra sessão; aqui vêm de função própria)
+  c := chamados.abrir_chamado_publico(tam, 13, 'Sem login: notebook', 1, array['publico/0b5f8e1e-1111-4a2b-9c3d-000000000001.png']);
+  if c->>'protocolo' is null or (c ? 'descricao') then raise exception 'retorno público'; end if;
+  if (c->>'prazo_assumir_em')::timestamptz - (c->>'criado_em')::timestamptz <> interval '4 hours' then raise exception 'prazo suporte meio urgente'; end if;
+  c := chamados.consultar_chamado(' ' || lower(c->>'protocolo') || ' ');
+  if c->>'status' <> 'aberto' or (c ? 'descricao') or (c ? 'prints') or c->>'sistema' <> 'Computador / notebook' then raise exception 'consulta: %', c; end if;
+  if chamados.consultar_chamado('TI-9999') is not null then raise exception 'consulta inexistente'; end if;
+  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(%L, 1, %L, 0, array[%L])', tam, 'x', 'publico/0b5f8e1e-1111-4a2b-9c3d-000000000001.png'), 'Print inválido');
+  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(%L, 1, %L, 0, array[%L])', tam, 'x', '00000000-0000-0000-0000-00000000000a/p1.png'), 'Print inválido');
+  for i in 1..4 loop perform chamados.abrir_chamado_publico(tam, 1, 'spam ' || i, 0); end loop;
+  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(%L, 1, %L, 0)', tam, 'sexto'), 'Muitos chamados');
+end $$;
+reset role;
+select pg_temp.como('');
+create temp table ids as select (select id from chamados.pessoas where nome = 'Aldo') aldo, (select id from chamados.pessoas where nome = 'Inativo Teste') ina;
+grant select on ids to anon;
+set role anon;
+select pg_temp.falha(format('select chamados.abrir_chamado_publico(%L, 1, %L, 0)', (select aldo from ids), 'x'), 'Escolha seu nome');
+select pg_temp.falha(format('select chamados.abrir_chamado_publico(%L, 1, %L, 0)', (select ina from ids), 'x'), 'Escolha seu nome');
+select pg_temp.falha($q$select count(*) from chamados.chamados$q$, 'permission denied');
+select pg_temp.falha($q$select count(*) from chamados.pessoas$q$, 'permission denied');
+select pg_temp.falha($q$select chamados.abrir_chamado(1, 'x', 0)$q$, 'permission denied');
+-- Storage sem login: só publico/<uuid>.<ext>
+insert into storage.objects (bucket_id, name) values ('chamados-prints', 'publico/0b5f8e1e-1111-4a2b-9c3d-000000000002.jpg');
+select pg_temp.falha($q$insert into storage.objects (bucket_id, name) values ('chamados-prints', 'publico/../x.png')$q$, 'row-level security');
+select pg_temp.falha($q$insert into storage.objects (bucket_id, name) values ('chamados-prints', '00000000-0000-0000-0000-00000000000a/x.png')$q$, 'row-level security');
+do $$ begin if (select count(*) from storage.objects) <> 0 then raise exception 'anon lê prints'; end if; end $$;
+reset role;
+-- Dev logado lê o print público
+set role authenticated;
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+do $$ begin if not exists (select 1 from storage.objects where name like 'publico/%') then raise exception 'dev não lê print público'; end if; end $$;
+reset role;
 \echo TODOS OS TESTES PASSARAM
