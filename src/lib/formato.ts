@@ -59,7 +59,7 @@ export function mensagemErro(e: unknown, padrao = 'Não foi possível concluir. 
   if (/rate limit/i.test(m)) return 'Muitas tentativas. Aguarde alguns minutos.';
   if (/Failed to fetch|NetworkError/i.test(m)) return 'Sem conexão com o servidor. Verifique a internet.';
   // Mensagens das RPCs já estão em português.
-  if (/^(Só |Este chamado|Seu acesso|Print inválido|Escolha seu nome|Muitos chamados|Informe seu setor|O nome escolhido)/.test(m)) return m;
+  if (/^(Só |Este chamado|Seu acesso|Print inválido|Escolha seu nome|Muitos chamados|Informe seu setor|O nome escolhido|Link inválido)/.test(m)) return m;
   if (/exceeded the maximum allowed size|Payload too large/i.test(m)) return 'Um dos prints passa de 5 MB. Recorte a imagem e tente de novo.';
   return padrao;
 }

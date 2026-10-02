@@ -1,13 +1,19 @@
 import { useState, type FormEvent } from 'react';
-import { abrirChamado, type ChamadoAberto } from '../lib/api';
+import { abrirChamado, type ChamadoAberto, type Convite } from '../lib/api';
 import { faltando, mensagemErro } from '../lib/formato';
 import { COR_URGENCIA, NOME_GRUPO, URGENCIAS, URGENCIA_PADRAO, type Catalogo, type Pessoa, type Sistema, type Urgencia } from '../lib/tipos';
 import { minutosPorExtenso } from '../lib/sla';
 import { AnexarPrints, type PrintLocal } from '../componentes/AnexarPrints';
 import { Check, Seta } from '../componentes/Icones';
 
-/** Com login (time): o nome vem da conta. Sem login: a pessoa escolhe o nome na lista. */
-export type Quem = { tipo: 'dev'; eu: Pessoa; userId: string } | { tipo: 'publico' };
+/**
+ * Com login (time): o nome vem da conta. Sem login: a pessoa escolhe setor e nome na lista,
+ * ou chega pelo botão de um sistema do hub (convite) com nome e, em geral, setor já definidos.
+ */
+export type Quem =
+  | { tipo: 'dev'; eu: Pessoa; userId: string }
+  | { tipo: 'publico' }
+  | { tipo: 'convite'; token: string; convite: Convite };
 
 interface Props {
   quem: Quem;
@@ -15,6 +21,8 @@ interface Props {
   ativa: boolean;
   onVerPainel?: () => void;
   onAcompanhar?: (protocolo: string) => void;
+  /** Convite já usado: o próximo chamado volta ao formulário comum. */
+  onConviteUsado?: () => void;
 }
 
 const CHAVE_NOME = 'rfg-chamados-solicitante';
@@ -24,8 +32,10 @@ function lembrado(chave: string): string {
 }
 const fmt = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar }: Props) {
+export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar, onConviteUsado }: Props) {
   const publico = quem.tipo === 'publico';
+  const convite = quem.tipo === 'convite' ? quem.convite : null;
+  const escolheSetor = publico || !!convite?.precisa_setor;
   // Sem login, setor e nome são obrigatórios e precisam combinar (o banco confere de novo).
   const [setorId, setSetorId] = useState(() => {
     const id = publico ? lembrado(CHAVE_SETOR) : '';
@@ -40,7 +50,7 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar 
     setSetorId(id);
     if (!catalogo.pessoas.some((p) => p.id === solicitanteId && String(p.setor_id) === id)) setSolicitanteId('');
   }
-  const [sistema, setSistema] = useState<number | null>(null);
+  const [sistema, setSistema] = useState<number | null>(convite?.sistema_id ?? null);
   const [descricao, setDescricao] = useState('');
   const [urgencia, setUrgencia] = useState<Urgencia | null>(URGENCIA_PADRAO);
   const [prints, setPrints] = useState<PrintLocal[]>([]);
@@ -48,9 +58,12 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar 
   const [erro, setErro] = useState('');
   const [enviado, setEnviado] = useState<ChamadoAberto | null>(null);
 
-  const eu = quem.tipo === 'dev' ? quem.eu : pessoasDoSetor.find((p) => p.id === solicitanteId);
+  const eu: Pick<Pessoa, 'nome'> & { id?: string } | undefined = quem.tipo === 'dev' ? quem.eu
+    : convite ? { nome: convite.nome }
+    : pessoasDoSetor.find((p) => p.id === solicitanteId);
   const setor = quem.tipo === 'dev'
-    ? catalogo.setores.find((s) => s.id === eu?.setor_id)?.nome
+    ? catalogo.setores.find((s) => s.id === quem.eu.setor_id)?.nome
+    : convite && !convite.precisa_setor ? convite.setor ?? undefined
     : catalogo.setores.find((s) => String(s.id) === setorId)?.nome;
   const setoresComPessoas = catalogo.setores.filter((s) => catalogo.pessoas.some((p) => p.setor_id === s.id));
   const grupos: [string, Sistema[]][] = [
@@ -62,10 +75,10 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar 
   const prazoDe = (n: number | null) => (grupo === null || n === null ? undefined : catalogo.prazos.find((p) => p.grupo === grupo && p.nivel === n));
   const prazoAtual = prazoDe(urgencia);
   const nomeSistema = (id: number | null) => catalogo.sistemas.find((s) => s.id === id)?.nome ?? '';
-  const falta = [...(publico && !setorId ? ['seu setor'] : []), ...(eu ? [] : ['seu nome']), ...faltando({ sistema, descricao, urgencia })];
+  const falta = [...(escolheSetor && !setorId ? ['seu setor'] : []), ...(eu ? [] : ['seu nome']), ...faltando({ sistema, descricao, urgencia })];
 
   const itens: [string, string][] = [
-    ...(publico ? [['Setor', setor ?? ''] as [string, string]] : []),
+    ...(quem.tipo !== 'dev' ? [['Setor', setor ?? ''] as [string, string]] : []),
     ['Nome', eu?.nome ?? ''],
     ['Sistema', nomeSistema(sistema)],
     ['Descrição', descricao.trim() ? 'Preenchida' : ''],
@@ -79,9 +92,12 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar 
     setEnviando(true); setErro('');
     try {
       if (!eu) return;
-      const c = await abrirChamado(quem.tipo === 'dev' ? { userId: quem.userId } : { setorId: Number(setorId), solicitanteId: eu.id },
+      const c = await abrirChamado(
+        quem.tipo === 'dev' ? { userId: quem.userId }
+          : quem.tipo === 'convite' ? { token: quem.token, setorId: quem.convite.precisa_setor ? Number(setorId) : null }
+          : { setorId: Number(setorId), solicitanteId: eu.id! },
         { sistemaId: sistema, descricao, urgencia, arquivos: prints.map((p) => p.file) });
-      if (publico) { try { localStorage.setItem(CHAVE_SETOR, setorId); localStorage.setItem(CHAVE_NOME, eu.id); } catch { /* sem armazenamento: só não lembra */ } }
+      if (publico) { try { localStorage.setItem(CHAVE_SETOR, setorId); localStorage.setItem(CHAVE_NOME, eu.id!); } catch { /* sem armazenamento: só não lembra */ } }
       setEnviado(c);
     } catch (err) {
       setErro(mensagemErro(err, 'Não foi possível enviar. Tente de novo.'));
@@ -92,6 +108,7 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar 
 
   function outro() {
     prints.forEach((p) => URL.revokeObjectURL(p.url));
+    if (convite && onConviteUsado) { onConviteUsado(); return; } // token é de uso único
     setSistema(null); setDescricao(''); setUrgencia(URGENCIA_PADRAO); setPrints([]); setErro(''); setEnviado(null);
   }
 
@@ -143,6 +160,33 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar 
                     <option value="">{setorId ? 'Selecione seu nome' : 'Escolha o setor primeiro'}</option>
                     {pessoasDoSetor.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
                   </select>
+                </div>
+              </div>
+            ) : convite ? (
+              <div className="grp">
+                <p className="banner" style={{ margin: 0 }} role="status">
+                  <span>
+                    Você veio {convite.sistema_origem ? <>do <b>{convite.sistema_origem}</b></> : 'de um sistema do hub'}.{' '}
+                    {convite.precisa_setor ? 'Seu nome vem do seu login; falta só informar o setor.' : 'Nome e setor vêm do seu login.'}
+                  </span>
+                </p>
+                <div className={convite.precisa_setor ? 'dupla' : undefined}>
+                  <div className="grp">
+                    <span className="lbl">Seu nome</span>
+                    <div className="field" style={{ background: 'var(--soft)', lineHeight: '22px' }}>
+                      {convite.nome}{!convite.precisa_setor && setor && <span className="muted">&nbsp;· {setor}</span>}
+                      {convite.cargo && <span className="muted">&nbsp;· {convite.cargo}</span>}
+                    </div>
+                  </div>
+                  {convite.precisa_setor && (
+                    <div className="grp">
+                      <label className="lbl" htmlFor="setor">Seu setor <span className="obrig" aria-hidden="true">*</span></label>
+                      <select className="field" id="setor" required value={setorId} onChange={(e) => setSetorId(e.target.value)}>
+                        <option value="">Selecione o setor</option>
+                        {catalogo.setores.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

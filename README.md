@@ -28,6 +28,10 @@ npm run build                # build de produção
 2. Variáveis de ambiente são opcionais: o código já aponta para o projeto ATLAS - INTEGRADO (valores em `.env.example`).
 3. No Supabase, em Authentication → URL Configuration, incluir o domínio da Vercel em *Redirect URLs*.
 
+## Botão "Abrir chamado" nos sistemas do hub
+
+Veja [`integracao/README.md`](integracao/README.md).
+
 ## Liberar um dev/suporte
 
 ```sql

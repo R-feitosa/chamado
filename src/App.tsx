@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react';
+import { lerConvite, type Convite } from './lib/api';
+import { tokenDaUrl, urlSemToken } from './lib/convite';
+import { mensagemErro } from './lib/formato';
 import { useSessao } from './hooks/useSessao';
 import { useChamados } from './hooks/useChamados';
 import { supabase } from './lib/supabase';
@@ -50,9 +53,28 @@ function Cabecalho({ abas, tela, onTela, contador, children }: {
 }
 
 /** Sem login: abrir e acompanhar chamados; o time entra pelo botão. */
+type EstadoConvite = { fase: 'nenhum' } | { fase: 'lendo' } | { fase: 'ok'; token: string; convite: Convite } | { fase: 'erro'; mensagem: string };
+
+/** Lê o token do botão do hub (?t=) uma vez e o tira da barra de endereço. */
+function useConvite(): [EstadoConvite, () => void] {
+  const [estado, setEstado] = useState<EstadoConvite>(() => (tokenDaUrl(location.search) ? { fase: 'lendo' } : { fase: 'nenhum' }));
+  useEffect(() => {
+    const token = tokenDaUrl(location.search);
+    if (!token) return;
+    history.replaceState(null, '', urlSemToken(location.href));
+    let vivo = true;
+    lerConvite(token)
+      .then((convite) => { if (vivo) setEstado({ fase: 'ok', token, convite }); })
+      .catch((e) => { if (vivo) setEstado({ fase: 'erro', mensagem: mensagemErro(e, 'Não foi possível ler o link. Abra o chamado pelo formulário.') }); });
+    return () => { vivo = false; };
+  }, []);
+  return [estado, () => setEstado({ fase: 'nenhum' })];
+}
+
 function Publico({ catalogo }: { catalogo: Catalogo }) {
   const [tela, setTela] = useState<Tela>(() => telaDoEndereco(ABAS_PUBLICAS, ['entrar']));
   const [protocolo, setProtocolo] = useState('');
+  const [convite, descartarConvite] = useConvite();
   const ir = (t: Tela) => irPara(t, setTela);
   return (
     <>
@@ -63,8 +85,13 @@ function Publico({ catalogo }: { catalogo: Catalogo }) {
       </Cabecalho>
       <main>
         <div hidden={tela !== 'abrir'}>
-          <AbrirChamado quem={{ tipo: 'publico' }} catalogo={catalogo} ativa={tela === 'abrir'}
-            onAcompanhar={(p) => { setProtocolo(p); ir('acompanhar'); }} />
+          {convite.fase === 'erro' && <div className="banner" role="alert">{convite.mensagem}</div>}
+          {convite.fase === 'lendo' ? <div className="carregando">Conferindo o link…</div> : (
+            <AbrirChamado key={convite.fase} catalogo={catalogo} ativa={tela === 'abrir'}
+              quem={convite.fase === 'ok' ? { tipo: 'convite', token: convite.token, convite: convite.convite } : { tipo: 'publico' }}
+              onConviteUsado={descartarConvite}
+              onAcompanhar={(p) => { setProtocolo(p); ir('acompanhar'); }} />
+          )}
         </div>
         {tela === 'acompanhar' && <Acompanhar key={protocolo} inicial={protocolo} />}
         {tela === 'entrar' && (

@@ -55,12 +55,24 @@ async function enviarPrints(pasta: string, arquivos: File[]): Promise<string[]> 
 
 interface DadosChamado { sistemaId: number; descricao: string; urgencia: Urgencia; arquivos: File[] }
 
+/** Quem chega pelo botão "Abrir chamado" de um sistema do hub (lido do token, sem login). */
+export interface Convite {
+  nome: string; setor_id: number | null; setor: string | null; precisa_setor: boolean;
+  cargo: string | null; sistema_id: number | null; sistema_origem: string | null; expira_em: string;
+}
+
+export async function lerConvite(token: string): Promise<Convite> {
+  const { data, error } = await supabase.rpc('ler_convite', { p_token: token });
+  if (error) throw error;
+  return data as Convite;
+}
+
 /**
  * Abre o chamado. Com login (time): em nome de quem está logado. Sem login: em nome do
- * solicitante escolhido na lista, com prints na pasta publico/.
+ * solicitante escolhido na lista, ou de quem veio pelo token do hub; prints na pasta publico/.
  */
 export async function abrirChamado(
-  quem: { userId: string } | { setorId: number; solicitanteId: string },
+  quem: { userId: string } | { setorId: number; solicitanteId: string } | { token: string; setorId: number | null },
   dados: DadosChamado,
 ): Promise<ChamadoAberto> {
   const logado = 'userId' in quem;
@@ -69,7 +81,9 @@ export async function abrirChamado(
     const base = { p_sistema_id: dados.sistemaId, p_descricao: dados.descricao, p_urgencia: dados.urgencia, p_prints: caminhos };
     const { data, error } = logado
       ? await supabase.rpc('abrir_chamado', base)
-      : await supabase.rpc('abrir_chamado_publico', { p_setor_id: quem.setorId, p_solicitante_id: quem.solicitanteId, ...base });
+      : 'token' in quem
+        ? await supabase.rpc('abrir_chamado_por_convite', { p_token: quem.token, p_setor_id: quem.setorId, ...base })
+        : await supabase.rpc('abrir_chamado_publico', { p_setor_id: quem.setorId, p_solicitante_id: quem.solicitanteId, ...base });
     if (error) throw error;
     const c = data as ChamadoAberto & { prints: number | string[] };
     return { ...c, prints: Array.isArray(c.prints) ? c.prints.length : c.prints };

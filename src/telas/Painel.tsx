@@ -11,6 +11,26 @@ import { Ampliar } from '../componentes/Ampliar';
 
 interface Props { eu: Pessoa; catalogo: Catalogo; chamados: Chamado[] }
 
+const ROTULOS: Record<string, string> = { tela: 'Página', cargo: 'Cargo', departamento: 'Departamento', email: 'E-mail', navegador: 'Navegador', resolucao: 'Resolução', versao: 'Versão' };
+
+/** Chamado aberto pelo botão de um sistema do hub: origem e contexto técnico (só o time vê). */
+function OrigemHub({ c, nome }: { c: Chamado; nome: string | null }) {
+  const itens = Object.entries(c.contexto ?? {}).filter(([, v]) => v);
+  return (
+    <details className="origem">
+      <summary><span className="pill andamento">via {nome ?? 'hub'}</span></summary>
+      {itens.length > 0 && (
+        <dl>
+          {itens.map(([k, v]) => (
+            <div key={k}><dt>{ROTULOS[k] ?? k}</dt>
+              <dd>{k === 'tela' && /^https?:\/\//.test(v) ? <a href={v} target="_blank" rel="noreferrer noopener">{v}</a> : k === 'email' ? <a href={`mailto:${v}`}>{v}</a> : v}</dd></div>
+          ))}
+        </dl>
+      )}
+    </details>
+  );
+}
+
 const fmt = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
 export function Painel({ eu, catalogo, chamados }: Props) {
@@ -22,6 +42,7 @@ export function Painel({ eu, catalogo, chamados }: Props) {
   const pessoa = useMemo(() => new Map(catalogo.pessoas.map((p) => [p.id, p])), [catalogo]);
   const setor = useMemo(() => new Map(catalogo.setores.map((s) => [s.id, s.nome])), [catalogo]);
   const sistema = useMemo(() => new Map(catalogo.sistemas.map((s) => [s.id, s.nome])), [catalogo]);
+  const sistemaHub = useMemo(() => new Map(catalogo.sistemas.filter((s) => s.hub_codigo).map((s) => [s.hub_codigo!, s.nome])), [catalogo]);
 
   const agora = Date.now();
   const k = indicadores(chamados, eu.id, agora);
@@ -95,6 +116,7 @@ export function Painel({ eu, catalogo, chamados }: Props) {
                   {sol?.nome ?? '—'}{sol?.setor_id ? ` · ${setor.get(sol.setor_id)}` : ''}
                 </div>
                 {c.descricao.length > 90 && <div className="desc">{c.descricao}</div>}
+                {(c.sistema_origem || c.contexto) && <OrigemHub c={c} nome={c.sistema_origem ? sistemaHub.get(c.sistema_origem) ?? c.sistema_origem : null} />}
                 <MiniPrints caminhos={c.prints} onAmpliar={setAmpliado} />
               </div>
               <span className="sys">{sistema.get(c.sistema_id) ?? '—'}</span>

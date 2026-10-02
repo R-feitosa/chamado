@@ -15,6 +15,7 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
 ## Perfis e telas
 **Login só para o time de dev/suporte.** Quem abre chamado não faz login: o app abre direto no formulário.
 - **Abrir chamado** (sem login): **setor e nome obrigatórios**: primeiro o setor, depois o nome numa lista filtrada por ele (o navegador lembra a última escolha), onde está o problema, descrição, prints (até 3, 5 MB cada: clicar, arrastar ou Ctrl+V), urgência. Ao enviar, mostra o protocolo e os prazos.
+- **Abrir pelo botão do hub** (sem login, com token): todo sistema do hub pode ter um botão "Abrir chamado" que leva para a Central já identificado. Nome travado (do login do hub), setor travado quando o departamento do RH tem correspondência (senão a pessoa escolhe), sistema de origem pré-selecionado. Token tirado da barra de endereço ao abrir; vale 2 h e uma vez. Link vencido → aviso + formulário comum.
 - **Acompanhar** (sem login): consulta pelo protocolo (aceita "TI-0422" ou "422"); mostra situação, onde, urgência, responsável (primeiro nome) e prazos. Nunca a descrição nem os prints.
 - **"É dev/suporte? Entrar"** no topo: login com a conta dos sistemas ATLAS. Conta que não é dev/suporte vê "O login é só para o time".
 - **Painel do time** (dev/suporte, tela inicial após o login): contagens (em aberto, sem responsável, atrasados, meus), tempos (espera média sem responsável, mais antigo em aberto, % assumidos e % resolvidos no prazo nos últimos 30 dias), fila com coluna "Prazo" (etapa atual: assumir em X / resolver em X / atrasado X, e há quanto tempo está aberto), botões Assumir / Resolver / Reabrir, prints com ampliação.
@@ -22,9 +23,9 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
 - Dev logado também pode abrir chamado (em nome próprio).
 
 ## Sistemas atendidos
-- **Sistemas:** ATLAS JURIS, CRM, ATLAS RH, Atlas Consult, ATLAS Empresas, Atlas Trib, Rfast Mail, Agente WhatsApp, App Connect Valley, Site Feitosa Imóveis, Site do escritório, Outro / não sei.
+- **Sistemas:** ATLAS JURIS, CRM, ATLAS RH, Atlas Consult, ATLAS Empresas, Atlas Trib, Rfast Mail, Agente WhatsApp, App Connect Valley, Site Feitosa Imóveis, Site do escritório, Connect Academy, Atlas Cash, Atlas Hub, Atlas Imóveis, Legal Ops, Atlas Ponto, R. Feitosa Ops, Outro / não sei.
 - **Suporte técnico:** Computador / notebook, Impressora / scanner, E-mail, senha e acessos.
-- Ficam em `chamados.sistemas`; a coluna `grupo` (`sistema` | `suporte`) separa os dois blocos no formulário.
+- Ficam em `chamados.sistemas`; a coluna `grupo` (`sistema` | `suporte`) separa os dois blocos no formulário e `hub_codigo` liga ao código em `hub.sistemas` (pré-seleção no botão do hub).
 
 ## Arquivos
 - `prototipo/index.html`: protótipo original (página única, referência visual e funcional).
@@ -32,6 +33,7 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
   - `lib/supabase.ts` cliente (schema `chamados`); `lib/api.ts` chamadas ao banco; `lib/fila.ts` e `lib/formato.ts` regras puras (com testes).
   - `lib/analytics.ts` cálculos de tempo e produtividade; `lib/sla.ts` situação do prazo (com testes).
   - `telas/` AbrirChamado, Acompanhar, Acesso (login do time), Painel, Analytics, SemCadastro; `componentes/` prints, ampliação, urgência.
+- `integracao/`: `abrir-chamado.ts` (função para o botão "Abrir chamado" dos sistemas do hub) e README de instalação.
 - `supabase/migrations/`: banco. `supabase/testes/rodar.sh` testa permissões e regras num Postgres local.
 
 ## Regras
@@ -49,10 +51,20 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
 - Tabelas: `setores`, `pessoas` (nome, setor, papel solicitante/dev, e-mail de login), `sistemas`, `chamados`, `eventos` (histórico).
 - Login (só dev/suporte): o mesmo `auth.users` dos sistemas ATLAS, ligado à pessoa pelo e-mail no primeiro acesso
   (`chamados.vincular_minha_conta`). Para liberar um dev: preencher `chamados.pessoas.email`.
-- Sem login (papel `anon`), só três funções, nenhuma tabela:
+- Sem login (papel `anon`), só estas funções, nenhuma tabela:
   - `catalogo_publico()`: setores, nome e setor dos solicitantes ativos, sistemas, urgências e prazos (nunca e-mail);
   - `abrir_chamado_publico(setor, solicitante, …)`: setor e nome obrigatórios e coerentes (o nome tem de ser do setor informado), só solicitante ativo; limite de 5 por pessoa e 30 no total a cada 10 min; grava `origem = 'publico'`;
-  - `consultar_chamado(protocolo)`: situação, prazos e primeiro nome do responsável.
+  - `consultar_chamado(protocolo)`: situação, prazos e primeiro nome do responsável;
+  - `ler_convite(token)` e `abrir_chamado_por_convite(token, setor, …)`: fluxo do botão do hub (abaixo).
+- **Botão do hub (padrão DISC):** `gerar_link_chamado(sistema, url, contexto)` só para `authenticated` com conta ativa
+  (`acessos.eh_usuario_ativo()`); lê nome (`hub.pessoas`), e-mail (`auth.users`), departamento e cargo (`rh.vw_vinculos_atuais`,
+  vínculo mais recente) no servidor; grava em `chamados.convites` só o hash SHA-256 do token (32 bytes); limite 20 links/h;
+  devolve `chamados.configuracao.app_url` + `/?t=<token>`. Ao abrir, a pessoa é achada por `user_id`/e-mail em `chamados.pessoas`
+  ou cadastrada (`origem_cadastro = 'hub'`). O chamado guarda `sistema_origem` e `contexto` (página, navegador, cargo,
+  departamento, e-mail), visíveis só para o time.
+- **De-para departamento → setor:** `chamados.setor_departamento`. Jurídico ← Cível, Trabalhista, Previdenciário, Tributário,
+  Execução, Judicial/NUJI/CAC; Controladoria ← Controladoria; Administrativo e Financeiro ← Administrativo, Financeiro, RH.
+  Departamento fora da tabela ou sem vínculo no RH: a pessoa escolhe o setor.
   Prints sem login vão para `chamados-prints/publico/<uuid>.<ext>` (só gravação; leitura só do time). Limite do bucket: 5 MB.
 - Escrita só por RPC `security definer` (`abrir_chamado`, `abrir_chamado_publico`, `assumir_chamado`, `resolver_chamado`, `reabrir_chamado`),
   com `search_path = ''` e retorno `jsonb` (padrão do projeto). O front logado só lê, filtrado por RLS.

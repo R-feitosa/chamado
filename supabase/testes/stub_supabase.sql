@@ -17,3 +17,12 @@ insert into storage.buckets values ('placeholder', 'placeholder', false, null, n
 create function storage.foldername(name text) returns text[] language sql immutable as $$ select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1] $$;
 grant execute on function storage.foldername(text) to authenticated;
 create publication supabase_realtime;
+-- Partes do projeto ATLAS lidas pelo convite do hub (só estrutura usada).
+create schema extensions; create extension pgcrypto schema extensions;
+create schema acessos; create schema hub; create schema rh;
+create table hub.pessoas (id uuid primary key, nome text);
+create table acessos.usuarios (id uuid primary key, pessoa_id uuid, status text);
+create table rh.vw_vinculos_atuais (pessoa_id uuid, departamento_nome text, cargo_nome text, data_admissao date);
+create function acessos.eh_usuario_ativo() returns boolean language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from acessos.usuarios u where u.id = auth.uid() and u.status = 'ativo') $$;
+grant usage on schema acessos to authenticated; grant execute on function acessos.eh_usuario_ativo() to authenticated;

@@ -146,7 +146,7 @@ do $$ declare cat jsonb; tam uuid; aldo uuid; ina uuid; c jsonb; i int; begin
   cat := chamados.catalogo_publico();
   if jsonb_array_length(cat->'pessoas') <> 16 then raise exception 'catálogo deve ter os 16 solicitantes ativos: %', jsonb_array_length(cat->'pessoas'); end if;
   if (cat->'pessoas'->0) ? 'email' then raise exception 'catálogo expõe e-mail'; end if;
-  if jsonb_array_length(cat->'prazos') <> 8 or jsonb_array_length(cat->'sistemas') <> 15 then raise exception 'catálogo incompleto'; end if;
+  if jsonb_array_length(cat->'prazos') <> 8 or jsonb_array_length(cat->'sistemas') <> 22 then raise exception 'catálogo incompleto'; end if;
   select (p->>'id')::uuid into tam from jsonb_array_elements(cat->'pessoas') p where p->>'nome' = 'Tamira';
   -- ids de dev e de inativo (lidos como superusuário no reset abaixo seriam outra sessão; aqui vêm de função própria)
   c := chamados.abrir_chamado_publico(4, tam, 13, 'Sem login: notebook', 1, array['publico/0b5f8e1e-1111-4a2b-9c3d-000000000001.png']);
@@ -185,5 +185,98 @@ reset role;
 set role authenticated;
 select pg_temp.como('00000000-0000-0000-0000-00000000000b');
 do $$ begin if not exists (select 1 from storage.objects where name like 'publico/%') then raise exception 'dev não lê print público'; end if; end $$;
+reset role;
+-- 13. Convite do hub (botão "Abrir chamado" nos sistemas do hub)
+select pg_temp.como('');
+insert into auth.users values
+  ('00000000-0000-0000-0000-0000000000a1', 'novo@teste.com'),
+  ('00000000-0000-0000-0000-0000000000a2', 'semrh@teste.com'),
+  ('00000000-0000-0000-0000-0000000000a3', 'suspenso@teste.com');
+insert into hub.pessoas values
+  ('00000000-0000-0000-0000-0000000000b1', 'Novo Colaborador Hub'), ('00000000-0000-0000-0000-0000000000b2', 'Sem Vinculo RH'),
+  ('00000000-0000-0000-0000-0000000000b3', 'Conta Suspensa'), ('00000000-0000-0000-0000-0000000000be', 'Tamira Pontes Loiola');
+insert into acessos.usuarios values
+  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000b1', 'ativo'),
+  ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000b2', 'ativo'),
+  ('00000000-0000-0000-0000-0000000000a3', '00000000-0000-0000-0000-0000000000b3', 'suspenso'),
+  ('00000000-0000-0000-0000-00000000000e', '00000000-0000-0000-0000-0000000000be', 'ativo');
+insert into rh.vw_vinculos_atuais values
+  ('00000000-0000-0000-0000-0000000000b1', 'Marketing', 'Analista', '2020-01-01'),
+  ('00000000-0000-0000-0000-0000000000b1', 'Cível', 'Advogado', '2025-03-01'),
+  ('00000000-0000-0000-0000-0000000000b2', 'Comercial', 'Vendedor', '2024-01-01');
+create temp table tokens (quem text primary key, token text);
+grant select, insert on tokens to authenticated, anon;
+
+set role authenticated;
+-- gera link como usuário ativo do hub (o mais recente vínculo do RH vale: Cível → Jurídico)
+select pg_temp.como('00000000-0000-0000-0000-0000000000a1');
+insert into tokens select 'novo', split_part(chamados.gerar_link_chamado('crm', 'https://crm.exemplo/negocios/42', '{"navegador":"Chrome"}') ->> 'url', '?t=', 2);
+select pg_temp.como('00000000-0000-0000-0000-0000000000a2');
+insert into tokens select 'semrh', split_part(chamados.gerar_link_chamado('academy', null, '{}') ->> 'url', '?t=', 2);
+select pg_temp.como('00000000-0000-0000-0000-00000000000e');
+insert into tokens select 'tamira', split_part(chamados.gerar_link_chamado('juris', null, '{}') ->> 'url', '?t=', 2);
+select pg_temp.como('00000000-0000-0000-0000-0000000000a3');
+select pg_temp.falha($q$select chamados.gerar_link_chamado('crm')$q$, 'Entre em um sistema do hub');
+select pg_temp.como('00000000-0000-0000-0000-0000000000a1');
+select pg_temp.falha($q$select chamados.gerar_link_chamado('crm', null, jsonb_build_object('x', (select string_agg(md5(i::text), '') from generate_series(1, 100) i)))$q$, 'Contexto grande demais');
+reset role;
+
+set role anon;
+select pg_temp.como('');
+select pg_temp.falha($q$select chamados.gerar_link_chamado('crm')$q$, 'permission denied');
+select pg_temp.falha($q$select * from chamados.convites$q$, 'permission denied');
+select pg_temp.falha($q$select chamados.ler_convite('nao-existe')$q$, 'Link inválido');
+do $$ declare t text; l jsonb; c jsonb; begin
+  select token into t from tokens where quem = 'novo';
+  if length(t) <> 64 then raise exception 'token deve ter 64 hex: %', t; end if;
+  l := chamados.ler_convite(t);
+  if l->>'nome' <> 'Novo Colaborador Hub' or l->>'setor' <> 'Jurídico' or (l->>'precisa_setor')::boolean
+     or l->>'sistema_origem' <> 'CRM' or (l->>'sistema_id')::int <> 2 or l->>'cargo' <> 'Advogado' or l ? 'email' then
+    raise exception 'ler_convite novo: %', l;
+  end if;
+  -- setor informado no formulário é ignorado quando o convite já traz o setor
+  c := chamados.abrir_chamado_por_convite(t, 1, 2, 'CRM não salva negócio', 2);
+  if c->>'protocolo' is null then raise exception 'abrir por convite'; end if;
+  perform pg_temp.falha(format('select chamados.abrir_chamado_por_convite(%L, null, 2, %L, 1)', t, 'de novo'), 'Link inválido');
+  perform pg_temp.falha(format('select chamados.ler_convite(%L)', t), 'Link inválido');
+
+  select token into t from tokens where quem = 'semrh';
+  l := chamados.ler_convite(t);
+  if not (l->>'precisa_setor')::boolean or l->>'setor' is not null or l->>'sistema_origem' <> 'Connect Academy' then raise exception 'ler_convite semrh: %', l; end if;
+  perform pg_temp.falha(format('select chamados.abrir_chamado_por_convite(%L, null, 16, %L, 1)', t, 'x'), 'Informe seu setor');
+  c := chamados.abrir_chamado_por_convite(t, 3, 16, 'Academy fora do ar', 1);
+
+  select token into t from tokens where quem = 'tamira';
+  l := chamados.ler_convite(t);
+  if l->>'nome' <> 'Tamira' or l->>'setor' <> 'Jurídico' then raise exception 'ler_convite tamira: %', l; end if;
+  c := chamados.abrir_chamado_por_convite(t, null, 1, 'Intimações vazias', 3);
+end $$;
+reset role;
+
+-- conferências como superusuário
+select pg_temp.como('');
+do $$ declare n int; begin
+  if (select count(*) from chamados.pessoas where origem_cadastro = 'hub') <> 2 then raise exception 'cadastro automático'; end if;
+  if (select setor_id from chamados.pessoas where nome = 'Novo Colaborador Hub') <> 4 then raise exception 'de-para Cível → Jurídico'; end if;
+  if (select setor_id from chamados.pessoas where nome = 'Sem Vinculo RH') <> 3 then raise exception 'setor escolhido'; end if;
+  if (select count(*) from chamados.pessoas where nome like 'Tamira%') <> 1 then raise exception 'Tamira duplicada'; end if;
+  if (select contexto->>'navegador' from chamados.chamados where descricao = 'CRM não salva negócio') <> 'Chrome'
+     or (select contexto->>'tela' from chamados.chamados where descricao = 'CRM não salva negócio') <> 'https://crm.exemplo/negocios/42'
+     or (select sistema_origem from chamados.chamados where descricao = 'CRM não salva negócio') <> 'crm' then raise exception 'contexto do chamado'; end if;
+  if (select count(*) from chamados.convites where usado_em is not null and chamado_id is not null) <> 3 then raise exception 'uso único'; end if;
+  -- expirado
+  update chamados.convites set expira_em = now() - interval '1 minute' where usado_em is null;
+end $$;
+-- limite de 20 links por hora (o usuário já gerou 1)
+set role authenticated;
+select pg_temp.como('00000000-0000-0000-0000-0000000000a1');
+do $$ declare i int; begin for i in 1..19 loop perform chamados.gerar_link_chamado('crm'); end loop; end $$;
+select pg_temp.falha($q$select chamados.gerar_link_chamado('crm')$q$, 'Muitos links');
+reset role;
+-- token expirado
+insert into chamados.convites (token_hash, usuario_id, nome, expira_em)
+values (extensions.digest('token-expirado', 'sha256'), '00000000-0000-0000-0000-0000000000a1', 'X', now() - interval '1 second');
+set role anon;
+select pg_temp.falha($q$select chamados.ler_convite('token-expirado')$q$, 'Link inválido');
 reset role;
 \echo TODOS OS TESTES PASSARAM
