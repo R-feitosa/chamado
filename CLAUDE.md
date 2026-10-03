@@ -28,6 +28,7 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
 - Ficam em `chamados.sistemas`; a coluna `grupo` (`sistema` | `suporte`) separa os dois blocos no formulário e `hub_codigo` liga ao código em `hub.sistemas` (pré-seleção no botão do hub).
 
 ## Arquivos
+- `docs/CONTEXTO.md`: visão completa do app para uma nova sessão (clone, URLs, arquitetura, banco, armadilhas, situação e próximos passos).
 - `prototipo/index.html`: protótipo original (página única, referência visual e funcional).
 - `src/`: sistema de produção (React 18 + Vite + TypeScript).
   - `lib/supabase.ts` cliente (schema `chamados`); `lib/api.ts` chamadas ao banco; `lib/fila.ts` e `lib/formato.ts` regras puras (com testes).
