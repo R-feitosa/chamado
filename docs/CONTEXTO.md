@@ -32,6 +32,7 @@ Dono do produto: Roneely Feitosa (sócio). Tudo em português do Brasil.
 | Vercel | equipe "R-feitosa's projects", projeto `chamado` (o conector do Claude **não** enxerga este projeto) |
 | Supabase | projeto **ATLAS - INTEGRADO** `ashxrwwlcarvqdigoxsi` (compartilhado com os outros sistemas do grupo), schema **`chamados`** |
 | Atlas Hub (outro repo) | https://github.com/Rfeitosagroup/atlas-hub — botão em `src/components/layout/Layout.jsx` + `src/lib/abrirChamado.js` |
+| CRM (outro repo) | https://github.com/Rfeitosagroup/crm-rfeitosa (produção = branch `developer`, crm.rfeitosa.com.br) — botão em `src/components/layout/Header.jsx` + `src/lib/abrirChamado.js` |
 
 ## 3. Stack e estrutura
 React 18 + Vite + TypeScript (sem framework de UI; CSS próprio em `src/styles.css`, fonte Geist, cor #2b4bee,
@@ -115,10 +116,10 @@ Funções (todas `security definer`, `search_path = ''`, retorno `jsonb`):
 - Chamados: TI-0421 (real, resolvido), TI-0422 (teste, resolvido — falta apagar no SQL Editor:
   `delete from chamados.chamados where protocolo = 'TI-0422' and descricao like '[TESTE]%';`), TI-0423 (teste pelo botão do hub, aberto).
 - 16 solicitantes, 6 devs (Kaio, Aldo, Ruan e João Pedro com login; **Brenno Magalhães e Breno Azevedo sem e-mail ainda**).
-- Botão do hub instalado no **Atlas Hub** (PR Rfeitosagroup/atlas-hub#27, em produção).
+- Botão do hub instalado no **Atlas Hub** (PR Rfeitosagroup/atlas-hub#27) e no **CRM** (PR Rfeitosagroup/crm-rfeitosa#93).
 
 ## 9. Próximos passos combinados
-1. Botão "Abrir chamado" nos outros sistemas do hub (sugestão: CRM e Juris) seguindo `integracao/README.md`.
+1. Botão "Abrir chamado" nos outros sistemas do hub (próximo sugerido: Juris) seguindo `integracao/README.md`.
 2. Liberar Brenno e Breno; confirmar o de-para RH → setor com o Roneely.
 3. Domínio `chamados.rfeitosa.com.br` e aviso ao time (e-mail/push) em chamados Urgente/Muito urgente.
 4. Limpeza periódica de prints órfãos em `chamados-prints/publico/`.

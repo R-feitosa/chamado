@@ -35,6 +35,7 @@ Códigos: `academy`, `cash`, `consult`, `crm`, `hub`, `imoveis`, `juris`, `legal
 | Sistema | Repositório | Onde | Arquivo |
 |---|---|---|---|
 | Atlas Hub (`hub`) | Rfeitosagroup/atlas-hub | barra superior, ao lado de "Novo Cliente" | `src/lib/abrirChamado.js` (versão JS deste arquivo) |
+| CRM (`crm`) | Rfeitosagroup/crm-rfeitosa (produção = branch `developer`) | cabeçalho, entre a busca e o Manual Comercial; erro vira toast | `src/lib/abrirChamado.js` + `src/components/layout/Header.jsx` |
 
 ## Regras e limites
 - Só gera link quem tem conta **ativa** em `acessos.usuarios`.
