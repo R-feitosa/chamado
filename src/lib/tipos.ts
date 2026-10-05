@@ -15,7 +15,12 @@ export interface Chamado {
   id: string;
   protocolo: string;
   descricao: string;
-  solicitante_id: string;
+  /** Cadastro de quem abriu; nulo quando a pessoa só digitou nome e cargo (sem cadastro). */
+  solicitante_id: string | null;
+  solicitante_nome?: string | null;
+  solicitante_cargo?: string | null;
+  setor_id?: number | null;
+  setor_outro?: string | null;
   sistema_id: number;
   urgencia: Urgencia;
   status: Status;

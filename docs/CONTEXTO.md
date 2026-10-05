@@ -14,7 +14,7 @@ npm run dev            # já aponta para o Supabase de produção (URL e chave p
 Verificações (rodar todas antes de qualquer push):
 ```bash
 npx tsc -b             # tipos
-npm test               # Vitest: regras de fila, prazos, analytics, convite (47 testes)
+npm test               # Vitest: regras de fila, prazos, analytics, convite, quem abriu (57 testes)
 npm run build
 ./supabase/testes/rodar.sh   # permissões e regras do banco num Postgres local (rodar como usuário postgres)
 ```
@@ -51,14 +51,14 @@ src/lib/convite.ts     token da URL do botão do hub              ┘
 src/telas/             AbrirChamado, Acompanhar, Acesso (login do time), Painel, Analytics, SemCadastro
 src/componentes/       prints (anexar, miniaturas com link assinado, ampliar), urgência, ícones
 integracao/            abrir-chamado.ts + README: como instalar o botão em outro sistema do hub
-supabase/migrations/   6 migrations (todas já aplicadas em produção)
+supabase/migrations/   8 migrations (todas já aplicadas em produção)
 supabase/testes/       stub do Supabase + regras.sql + antes_/depois_<versão>.sql + rodar.sh
 prototipo/index.html   protótipo original (referência visual)
 ```
 
 ## 4. Perfis e telas
 - **Sem login (qualquer colaborador)** — o app abre direto em "Abrir chamado":
-  setor e nome obrigatórios (nome filtrado pelo setor; o banco confere a combinação), onde está o problema
+  setor (lista + "Outro"), nome e cargo obrigatórios em texto livre (quem não está cadastrado também abre; nada é cadastrado), onde está o problema
   (Sistemas de desenvolvimento ou Suporte técnico), descrição, até 3 prints de 5 MB (clicar/arrastar/Ctrl+V),
   urgência (padrão "Meio urgente"). Recebe protocolo `TI-0423…` e os prazos.
   Aba **Acompanhar**: consulta pelo protocolo (situação, responsável, prazos; nunca a descrição).
@@ -87,14 +87,15 @@ Dois prazos por chamado, horas corridas desde a abertura, congelados na abertura
 
 ## 6. Banco (schema `chamados`)
 Tabelas: `setores` (4), `pessoas` (nome, setor, papel `solicitante|dev`, e-mail, `user_id`, `origem_cadastro manual|hub`),
-`sistemas` (22; `grupo sistema|suporte`, `hub_codigo`), `urgencias`, `prazos` (grupo × nível → minutos),
-`chamados` (protocolo, status, urgência, prazos, `assumido_em`, prints, `origem`, `sistema_origem`, `contexto`),
+`sistemas` (23; `grupo sistema|suporte`, `hub_codigo`), `urgencias`, `prazos` (grupo × nível → minutos),
+`chamados` (protocolo, status, urgência, prazos, `assumido_em`, prints, `origem`, `sistema_origem`, `contexto`,
+`solicitante_nome`, `solicitante_cargo`, `setor_id`, `setor_outro`; `solicitante_id` nulo = quem abriu não tem cadastro),
 `eventos` (histórico), `convites` (tokens do hub, só hash), `setor_departamento` (de-para RH → setor), `configuracao` (`app_url`).
 
 Funções (todas `security definer`, `search_path = ''`, retorno `jsonb`):
-- **Sem login (anon):** `catalogo_publico`, `abrir_chamado_publico(setor, solicitante, sistema, descricao, urgencia, prints)`
-  (limite 5/pessoa e 30/total a cada 10 min), `consultar_chamado(protocolo)`, `ler_convite(token)`,
-  `abrir_chamado_por_convite(token, setor, …)`.
+- **Sem login (anon):** `catalogo_publico` (sem nomes de pessoas), `abrir_chamado_publico(setor_id|null, setor_outro, nome, cargo, sistema, descricao, urgencia, prints)`
+  (limite 5/nome e 30/total a cada 10 min; liga ao cadastro se o nome bater no mesmo setor), `consultar_chamado(protocolo)`, `ler_convite(token)`,
+  `abrir_chamado_por_convite(token, setor, cargo, …)` (cargo só quando o RH não tem).
 - **Logado:** `vincular_minha_conta`, `abrir_chamado`, `assumir_chamado`, `resolver_chamado`, `reabrir_chamado`;
   `gerar_link_chamado(sistema, url, contexto)` (usado pelos sistemas do hub; exige `acessos.eh_usuario_ativo()`, 20 links/h).
 - Gatilho `chamados_definir_prazos` calcula os prazos. Protocolo pela sequência `protocolo_seq`.

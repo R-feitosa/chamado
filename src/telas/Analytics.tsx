@@ -4,6 +4,7 @@ import {
 } from '../lib/analytics';
 import { NOME_GRUPO, type Catalogo, type Chamado, type Grupo } from '../lib/tipos';
 import { formatoPct, taxaAssumidoNoPrazo, taxaNoPrazo } from '../lib/sla';
+import { quemAbriu } from '../lib/fila';
 
 interface Props { catalogo: Catalogo; chamados: Chamado[] }
 
@@ -72,8 +73,8 @@ export function Analytics({ catalogo, chamados }: Props) {
   const maxRes = Math.max(1, ...linhas.map((l) => l.resolvidos));
   const tecnicos = linhas.map((l) => ({ id: l.id, nome: pessoa.get(l.id)?.nome ?? '—' }));
   const porSistema = matriz(resolvidos, (c) => c.sistema_id);
-  const porSetor = matriz(resolvidos, (c) => pessoa.get(c.solicitante_id)?.setor_id ?? 'dev');
-  const colSetores = [...catalogo.setores.map((s) => ({ chave: String(s.id), nome: s.nome })), { chave: 'dev', nome: 'Dev/Suporte' }];
+  const porSetor = matriz(resolvidos, (c) => quemAbriu(c, pessoa, catalogo.setores).setorChave);
+  const colSetores = [...catalogo.setores.map((s) => ({ chave: String(s.id), nome: s.nome })), { chave: 'outro', nome: 'Outro' }, { chave: 'dev', nome: 'Dev/Suporte' }];
 
   const assumidos = chamados.filter((c) => c.assumido_em && new Date(c.assumido_em).getTime() >= desde);
   const grupoDe = (c: Chamado): Grupo => catalogo.sistemas.find((s) => s.id === c.sistema_id)?.grupo ?? 'sistema';

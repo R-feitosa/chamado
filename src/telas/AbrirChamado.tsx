@@ -1,14 +1,14 @@
 import { useState, type FormEvent } from 'react';
 import { abrirChamado, type ChamadoAberto, type Convite } from '../lib/api';
-import { faltando, mensagemErro } from '../lib/formato';
+import { faltaSolicitante, faltando, limparTexto, mensagemErro, SETOR_OUTRO } from '../lib/formato';
 import { COR_URGENCIA, NOME_GRUPO, URGENCIAS, URGENCIA_PADRAO, type Catalogo, type Pessoa, type Sistema, type Urgencia } from '../lib/tipos';
 import { minutosPorExtenso } from '../lib/sla';
 import { AnexarPrints, type PrintLocal } from '../componentes/AnexarPrints';
 import { Check, Seta } from '../componentes/Icones';
 
 /**
- * Com login (time): o nome vem da conta. Sem login: a pessoa escolhe setor e nome na lista,
- * ou chega pelo botão de um sistema do hub (convite) com nome e, em geral, setor já definidos.
+ * Com login (time): o nome vem da conta. Sem login: a pessoa escolhe o setor (ou "Outro") e
+ * digita nome e cargo, ou chega pelo botão de um sistema do hub (convite) com nome e, em geral, setor já definidos.
  */
 export type Quem =
   | { tipo: 'dev'; eu: Pessoa; userId: string }
@@ -25,10 +25,15 @@ interface Props {
   onConviteUsado?: () => void;
 }
 
-const CHAVE_NOME = 'rfg-chamados-solicitante';
 const CHAVE_SETOR = 'rfg-chamados-setor';
+const CHAVE_SETOR_OUTRO = 'rfg-chamados-setor-outro';
+const CHAVE_NOME = 'rfg-chamados-nome';
+const CHAVE_CARGO = 'rfg-chamados-cargo';
 function lembrado(chave: string): string {
   try { return localStorage.getItem(chave) ?? ''; } catch { return ''; }
+}
+function lembrar(valores: Record<string, string>) {
+  try { Object.entries(valores).forEach(([k, v]) => localStorage.setItem(k, v)); } catch { /* sem armazenamento: só não lembra */ }
 }
 const fmt = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
@@ -36,20 +41,15 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar,
   const publico = quem.tipo === 'publico';
   const convite = quem.tipo === 'convite' ? quem.convite : null;
   const escolheSetor = publico || !!convite?.precisa_setor;
-  // Sem login, setor e nome são obrigatórios e precisam combinar (o banco confere de novo).
+  const pedeCargo = publico || (!!convite && !convite.cargo);
+  // Sem login: setor (lista + "Outro"), nome e cargo obrigatórios; o navegador lembra o último preenchimento.
   const [setorId, setSetorId] = useState(() => {
     const id = publico ? lembrado(CHAVE_SETOR) : '';
-    return catalogo.setores.some((s) => String(s.id) === id) ? id : '';
+    return id === SETOR_OUTRO || catalogo.setores.some((s) => String(s.id) === id) ? id : '';
   });
-  const [solicitanteId, setSolicitanteId] = useState(() => {
-    const id = publico ? lembrado(CHAVE_NOME) : '';
-    return catalogo.pessoas.some((p) => p.id === id && String(p.setor_id) === setorId) ? id : '';
-  });
-  const pessoasDoSetor = catalogo.pessoas.filter((p) => String(p.setor_id) === setorId);
-  function trocarSetor(id: string) {
-    setSetorId(id);
-    if (!catalogo.pessoas.some((p) => p.id === solicitanteId && String(p.setor_id) === id)) setSolicitanteId('');
-  }
+  const [setorOutro, setSetorOutro] = useState(() => (publico ? lembrado(CHAVE_SETOR_OUTRO) : ''));
+  const [nome, setNome] = useState(() => (publico ? lembrado(CHAVE_NOME) : ''));
+  const [cargo, setCargo] = useState(() => (pedeCargo ? lembrado(CHAVE_CARGO) : ''));
   const [sistema, setSistema] = useState<number | null>(convite?.sistema_id ?? null);
   const [descricao, setDescricao] = useState('');
   const [urgencia, setUrgencia] = useState<Urgencia | null>(URGENCIA_PADRAO);
@@ -58,14 +58,12 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar,
   const [erro, setErro] = useState('');
   const [enviado, setEnviado] = useState<ChamadoAberto | null>(null);
 
-  const eu: Pick<Pessoa, 'nome'> & { id?: string } | undefined = quem.tipo === 'dev' ? quem.eu
-    : convite ? { nome: convite.nome }
-    : pessoasDoSetor.find((p) => p.id === solicitanteId);
+  const nomeExibido = quem.tipo === 'dev' ? quem.eu.nome : convite ? convite.nome : limparTexto(nome);
   const setor = quem.tipo === 'dev'
     ? catalogo.setores.find((s) => s.id === quem.eu.setor_id)?.nome
     : convite && !convite.precisa_setor ? convite.setor ?? undefined
+    : setorId === SETOR_OUTRO ? limparTexto(setorOutro) || undefined
     : catalogo.setores.find((s) => String(s.id) === setorId)?.nome;
-  const setoresComPessoas = catalogo.setores.filter((s) => catalogo.pessoas.some((p) => p.setor_id === s.id));
   const grupos: [string, Sistema[]][] = [
     ['Sistemas (desenvolvimento)', catalogo.sistemas.filter((s) => s.ativo && s.grupo !== 'suporte')],
     ['Suporte técnico (computador, impressora, e-mail, acessos)', catalogo.sistemas.filter((s) => s.ativo && s.grupo === 'suporte')],
@@ -75,11 +73,15 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar,
   const prazoDe = (n: number | null) => (grupo === null || n === null ? undefined : catalogo.prazos.find((p) => p.grupo === grupo && p.nivel === n));
   const prazoAtual = prazoDe(urgencia);
   const nomeSistema = (id: number | null) => catalogo.sistemas.find((s) => s.id === id)?.nome ?? '';
-  const falta = [...(escolheSetor && !setorId ? ['seu setor'] : []), ...(eu ? [] : ['seu nome']), ...faltando({ sistema, descricao, urgencia })];
+  const falta = [
+    ...(quem.tipo === 'dev' ? [] : faltaSolicitante({ setor: setorId, setorOutro, nome, cargo }, escolheSetor, publico, pedeCargo)),
+    ...faltando({ sistema, descricao, urgencia }),
+  ];
 
   const itens: [string, string][] = [
     ...(quem.tipo !== 'dev' ? [['Setor', setor ?? ''] as [string, string]] : []),
-    ['Nome', eu?.nome ?? ''],
+    ['Nome', nomeExibido],
+    ...(pedeCargo ? [['Cargo', limparTexto(cargo)] as [string, string]] : []),
     ['Sistema', nomeSistema(sistema)],
     ['Descrição', descricao.trim() ? 'Preenchida' : ''],
     ['Urgência', urgencia === null ? '' : URGENCIAS[urgencia]],
@@ -91,13 +93,14 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar,
     if (falta.length || enviando || sistema === null || urgencia === null) return;
     setEnviando(true); setErro('');
     try {
-      if (!eu) return;
+      const outro = setorId === SETOR_OUTRO;
       const c = await abrirChamado(
         quem.tipo === 'dev' ? { userId: quem.userId }
-          : quem.tipo === 'convite' ? { token: quem.token, setorId: quem.convite.precisa_setor ? Number(setorId) : null }
-          : { setorId: Number(setorId), solicitanteId: eu.id! },
+          : quem.tipo === 'convite' ? { token: quem.token, setorId: quem.convite.precisa_setor ? Number(setorId) : null, cargo: pedeCargo ? limparTexto(cargo) : null }
+          : { setorId: outro ? null : Number(setorId), setorOutro: limparTexto(setorOutro), nome: limparTexto(nome), cargo: limparTexto(cargo) },
         { sistemaId: sistema, descricao, urgencia, arquivos: prints.map((p) => p.file) });
-      if (publico) { try { localStorage.setItem(CHAVE_SETOR, setorId); localStorage.setItem(CHAVE_NOME, eu.id!); } catch { /* sem armazenamento: só não lembra */ } }
+      if (publico) lembrar({ [CHAVE_SETOR]: setorId, [CHAVE_SETOR_OUTRO]: outro ? limparTexto(setorOutro) : '', [CHAVE_NOME]: limparTexto(nome), [CHAVE_CARGO]: limparTexto(cargo) });
+      else if (pedeCargo) lembrar({ [CHAVE_CARGO]: limparTexto(cargo) });
       setEnviado(c);
     } catch (err) {
       setErro(mensagemErro(err, 'Não foi possível enviar. Tente de novo.'));
@@ -129,7 +132,7 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar,
           </p>
           <dl>
             <dt>Protocolo</dt><dd className="mono" style={{ fontSize: 18 }}>{enviado.protocolo}</dd>
-            <dt>Aberto por</dt><dd>{eu?.nome}{setor && <span className="muted"> · {setor}</span>}</dd>
+            <dt>Aberto por</dt><dd>{nomeExibido}{setor && <span className="muted"> · {setor}</span>}</dd>
             <dt>Onde</dt><dd>{nomeSistema(enviado.sistema_id)}</dd>
             <dt>Urgência</dt><dd>{URGENCIAS[enviado.urgencia]}</dd>
             <dt>Assumir até</dt><dd>{fmt(enviado.prazo_assumir_em)}</dd>
@@ -146,31 +149,48 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar,
         <form className="wrap" noValidate onSubmit={enviar}>
           <div className="card form">
             {publico ? (
-              <div className="dupla">
-                <div className="grp">
-                  <label className="lbl" htmlFor="setor">Seu setor <span className="obrig" aria-hidden="true">*</span></label>
-                  <select className="field" id="setor" required value={setorId} onChange={(e) => trocarSetor(e.target.value)}>
-                    <option value="">Selecione o setor</option>
-                    {setoresComPessoas.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
-                  </select>
+              <>
+                <div className="dupla">
+                  <div className="grp">
+                    <label className="lbl" htmlFor="setor">Seu setor <span className="obrig" aria-hidden="true">*</span></label>
+                    <select className="field" id="setor" required value={setorId} onChange={(e) => setSetorId(e.target.value)}>
+                      <option value="">Selecione o setor</option>
+                      {catalogo.setores.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                      <option value={SETOR_OUTRO}>Outro</option>
+                    </select>
+                  </div>
+                  {setorId === SETOR_OUTRO && (
+                    <div className="grp">
+                      <label className="lbl" htmlFor="setorOutro">Qual setor? <span className="obrig" aria-hidden="true">*</span></label>
+                      <input className="field" id="setorOutro" required maxLength={60} value={setorOutro} onChange={(e) => setSetorOutro(e.target.value)}
+                        placeholder="Ex.: Comercial" />
+                    </div>
+                  )}
                 </div>
-                <div className="grp">
-                  <label className="lbl" htmlFor="nome">Seu nome <span className="obrig" aria-hidden="true">*</span></label>
-                  <select className="field" id="nome" required disabled={!setorId} value={solicitanteId} onChange={(e) => setSolicitanteId(e.target.value)}>
-                    <option value="">{setorId ? 'Selecione seu nome' : 'Escolha o setor primeiro'}</option>
-                    {pessoasDoSetor.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                  </select>
+                <div className="dupla">
+                  <div className="grp">
+                    <label className="lbl" htmlFor="nome">Seu nome <span className="obrig" aria-hidden="true">*</span></label>
+                    <input className="field" id="nome" required autoComplete="name" maxLength={80} value={nome} onChange={(e) => setNome(e.target.value)}
+                      placeholder="Nome e sobrenome" />
+                  </div>
+                  <div className="grp">
+                    <label className="lbl" htmlFor="cargo">Seu cargo <span className="obrig" aria-hidden="true">*</span></label>
+                    <input className="field" id="cargo" required autoComplete="organization-title" maxLength={60} value={cargo} onChange={(e) => setCargo(e.target.value)}
+                      placeholder="Ex.: Advogada, Analista financeiro" />
+                  </div>
                 </div>
-              </div>
+              </>
             ) : convite ? (
               <div className="grp">
                 <p className="banner" style={{ margin: 0 }} role="status">
                   <span>
                     Você veio {convite.sistema_origem ? <>do <b>{convite.sistema_origem}</b></> : 'de um sistema do hub'}.{' '}
-                    {convite.precisa_setor ? 'Seu nome vem do seu login; falta só informar o setor.' : 'Nome e setor vêm do seu login.'}
+                    {convite.precisa_setor || pedeCargo
+                      ? `Seu nome vem do seu login; falta só informar ${[convite.precisa_setor && 'o setor', pedeCargo && 'o cargo'].filter(Boolean).join(' e ')}.`
+                      : 'Nome, setor e cargo vêm do seu login.'}
                   </span>
                 </p>
-                <div className={convite.precisa_setor ? 'dupla' : undefined}>
+                <div className={convite.precisa_setor || pedeCargo ? 'dupla' : undefined}>
                   <div className="grp">
                     <span className="lbl">Seu nome</span>
                     <div className="field" style={{ background: 'var(--soft)', lineHeight: '22px' }}>
@@ -178,6 +198,13 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar,
                       {convite.cargo && <span className="muted">&nbsp;· {convite.cargo}</span>}
                     </div>
                   </div>
+                  {pedeCargo && (
+                    <div className="grp">
+                      <label className="lbl" htmlFor="cargo">Seu cargo <span className="obrig" aria-hidden="true">*</span></label>
+                      <input className="field" id="cargo" required autoComplete="organization-title" maxLength={60} value={cargo} onChange={(e) => setCargo(e.target.value)}
+                        placeholder="Ex.: Advogada, Analista financeiro" />
+                    </div>
+                  )}
                   {convite.precisa_setor && (
                     <div className="grp">
                       <label className="lbl" htmlFor="setor">Seu setor <span className="obrig" aria-hidden="true">*</span></label>
@@ -193,7 +220,7 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar,
               <div className="grp">
                 <span className="lbl">Seu nome</span>
                 <div className="field" style={{ display: 'flex', alignItems: 'center', background: 'var(--soft)' }}>
-                  {eu?.nome}{setor && <span className="muted">&nbsp;· {setor}</span>}
+                  {nomeExibido}{setor && <span className="muted">&nbsp;· {setor}</span>}
                 </div>
               </div>
             )}

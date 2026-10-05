@@ -35,6 +35,24 @@ export function faltando(c: { sistema: number | null; descricao: string; urgenci
   return f;
 }
 
+/** Espaços nas pontas e repetidos fora (mesma regra de chamados._limpar no banco). */
+export function limparTexto(t: string): string {
+  return t.trim().replace(/\s+/g, ' ');
+}
+
+/** Valor do select de setor para "Outro" (aí a pessoa digita qual). */
+export const SETOR_OUTRO = 'outro';
+
+/** O que falta para identificar quem abre sem login (tamanhos iguais aos do banco). */
+export function faltaSolicitante(c: { setor: string; setorOutro: string; nome: string; cargo: string }, pedeSetor = true, pedeNome = true, pedeCargo = true): string[] {
+  const f: string[] = [];
+  const tam = (t: string, min: number, max: number) => { const n = limparTexto(t).length; return n >= min && n <= max; };
+  if (pedeSetor && (!c.setor || (c.setor === SETOR_OUTRO && !tam(c.setorOutro, 2, 60)))) f.push('seu setor');
+  if (pedeNome && !tam(c.nome, 3, 80)) f.push('seu nome');
+  if (pedeCargo && !tam(c.cargo, 2, 60)) f.push('seu cargo');
+  return f;
+}
+
 export const MAX_PRINTS = 3;
 export const MAX_BYTES = 5 * 1024 * 1024;
 const TIPOS = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];

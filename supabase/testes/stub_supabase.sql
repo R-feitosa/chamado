@@ -18,7 +18,7 @@ create function storage.foldername(name text) returns text[] language sql immuta
 grant execute on function storage.foldername(text) to authenticated;
 create publication supabase_realtime;
 -- Partes do projeto ATLAS lidas pelo convite do hub (só estrutura usada).
-create schema extensions; create extension pgcrypto schema extensions;
+create schema extensions; create extension pgcrypto schema extensions; create extension unaccent schema extensions;
 create schema acessos; create schema hub; create schema rh;
 create table hub.pessoas (id uuid primary key, nome text);
 create table acessos.usuarios (id uuid primary key, pessoa_id uuid, status text);

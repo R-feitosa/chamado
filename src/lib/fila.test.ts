@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { indicadores, noFiltro, ordenar } from './fila';
-import type { Chamado } from './tipos';
+import { indicadores, noFiltro, ordenar, quemAbriu } from './fila';
+import type { Chamado, Pessoa, Setor } from './tipos';
 
 const base: Chamado = {
   id: '', protocolo: '', descricao: 'x', solicitante_id: 's', sistema_id: 1, urgencia: 0, status: 'aberto',
@@ -32,4 +32,20 @@ describe('filtros', () => {
 describe('indicadores', () => {
   it('conta só os abertos', () =>
     expect(indicadores(lista, 'kaio', new Date('2026-10-02T00:00:00Z').getTime())).toEqual({ emAberto: 4, semResponsavel: 3, muitoUrgente: 2, meus: 1, atrasados: 2 }));
+});
+
+describe('quemAbriu', () => {
+  const setores: Setor[] = [{ id: 4, nome: 'Jurídico', ordem: 4 }];
+  const pessoas = new Map<string, Pessoa>([
+    ['tam', { id: 'tam', nome: 'Tamira', setor_id: 4, papel: 'solicitante', ativo: true }],
+    ['kaio', { id: 'kaio', nome: 'Kaio', setor_id: null, papel: 'dev', ativo: true }],
+  ]);
+  it('cadastro ligado', () => expect(quemAbriu(c({ solicitante_id: 'tam', solicitante_nome: 'TAMIRA', solicitante_cargo: 'Advogada' }), pessoas, setores))
+    .toEqual({ nome: 'Tamira', cargo: 'Advogada', setor: 'Jurídico', setorChave: '4', cadastrado: true }));
+  it('sem cadastro, setor da lista', () => expect(quemAbriu(c({ solicitante_id: null, solicitante_nome: 'Maria Silva', solicitante_cargo: 'Estagiária', setor_id: 4 }), pessoas, setores))
+    .toEqual({ nome: 'Maria Silva', cargo: 'Estagiária', setor: 'Jurídico', setorChave: '4', cadastrado: false }));
+  it('setor "Outro"', () => expect(quemAbriu(c({ solicitante_id: null, solicitante_nome: 'Pedro', solicitante_cargo: 'Vendedor', setor_id: null, setor_outro: 'Comercial' }), pessoas, setores))
+    .toMatchObject({ setor: 'Comercial', setorChave: 'outro' }));
+  it('dev sem setor; cargo antigo do contexto do hub', () => expect(quemAbriu(c({ solicitante_id: 'kaio', contexto: { cargo: 'Dev' } }), pessoas, setores))
+    .toMatchObject({ nome: 'Kaio', cargo: 'Dev', setor: null, setorChave: 'dev' }));
 });

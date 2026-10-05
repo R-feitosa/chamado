@@ -58,7 +58,7 @@ do $$ declare c chamados.chamados; begin
   c := jsonb_populate_record(null::chamados.chamados, chamados.abrir_chamado(14, 'Impressora', 0));
   if c.prazo_assumir_em - c.criado_em <> interval '8 hours' or c.prazo_em - c.criado_em <> interval '48 hours' then raise exception 'prazo suporte não urgente'; end if;
   if (select count(*) from chamados.urgencias) <> 4 or (select count(*) from chamados.prazos) <> 8 then raise exception 'solicitante não lê urgências/prazos'; end if;
-  if (select count(*) from chamados.sistemas where grupo = 'suporte') <> 3 then raise exception 'suporte técnico'; end if;
+  if (select count(*) from chamados.sistemas where grupo = 'suporte') <> 4 then raise exception 'suporte técnico'; end if;
 end $$;
 select pg_temp.espera_erro($$select chamados.abrir_chamado(1, 'x', 0, array['00000000-0000-0000-0000-00000000000a/1','00000000-0000-0000-0000-00000000000a/2','00000000-0000-0000-0000-00000000000a/3','00000000-0000-0000-0000-00000000000a/4'])$$, 'chamados_prints_check');
 -- Escrita direta é proibida
@@ -142,36 +142,51 @@ begin
   end;
   raise exception 'Deveria ter falhado: %', sqltxt;
 end $f$;
-do $$ declare cat jsonb; tam uuid; aldo uuid; ina uuid; c jsonb; i int; begin
+do $$ declare cat jsonb; c jsonb; i int; begin
   cat := chamados.catalogo_publico();
-  if jsonb_array_length(cat->'pessoas') <> 16 then raise exception 'catálogo deve ter os 16 solicitantes ativos: %', jsonb_array_length(cat->'pessoas'); end if;
-  if (cat->'pessoas'->0) ? 'email' then raise exception 'catálogo expõe e-mail'; end if;
-  if jsonb_array_length(cat->'prazos') <> 8 or jsonb_array_length(cat->'sistemas') <> 22 then raise exception 'catálogo incompleto'; end if;
-  select (p->>'id')::uuid into tam from jsonb_array_elements(cat->'pessoas') p where p->>'nome' = 'Tamira';
-  -- ids de dev e de inativo (lidos como superusuário no reset abaixo seriam outra sessão; aqui vêm de função própria)
-  c := chamados.abrir_chamado_publico(4, tam, 13, 'Sem login: notebook', 1, array['publico/0b5f8e1e-1111-4a2b-9c3d-000000000001.png']);
+  if jsonb_array_length(cat->'pessoas') <> 0 then raise exception 'catálogo não pode expor nomes: %', cat->'pessoas'; end if;
+  if jsonb_array_length(cat->'setores') <> 4 or jsonb_array_length(cat->'prazos') <> 8 or jsonb_array_length(cat->'sistemas') <> 23 then raise exception 'catálogo incompleto'; end if;
+  -- nome livre de quem não está cadastrado
+  c := chamados.abrir_chamado_publico(4, null, '  Maria   da Silva ', 'Estagiária', 13, 'Sem login: notebook', 1, array['publico/0b5f8e1e-1111-4a2b-9c3d-000000000001.png']);
   if c->>'protocolo' is null or (c ? 'descricao') then raise exception 'retorno público'; end if;
   if (c->>'prazo_assumir_em')::timestamptz - (c->>'criado_em')::timestamptz <> interval '4 hours' then raise exception 'prazo suporte meio urgente'; end if;
   c := chamados.consultar_chamado(' ' || lower(c->>'protocolo') || ' ');
   if c->>'status' <> 'aberto' or (c ? 'descricao') or (c ? 'prints') or c->>'sistema' <> 'Computador / notebook' then raise exception 'consulta: %', c; end if;
   if chamados.consultar_chamado('TI-9999') is not null then raise exception 'consulta inexistente'; end if;
-  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(4, %L, 1, %L, 0, array[%L])', tam, 'x', 'publico/0b5f8e1e-1111-4a2b-9c3d-000000000001.png'), 'Print inválido');
-  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(4, %L, 1, %L, 0, array[%L])', tam, 'x', '00000000-0000-0000-0000-00000000000a/p1.png'), 'Print inválido');
-  -- setor obrigatório e coerente com o nome
-  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(null, %L, 1, %L, 0)', tam, 'x'), 'Informe seu setor');
-  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(99, %L, 1, %L, 0)', tam, 'x'), 'Informe seu setor');
-  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(3, %L, 1, %L, 0)', tam, 'x'), 'não é do setor');
-  perform pg_temp.falha('select chamados.abrir_chamado_publico(4, null, 1, ''x'', 0)', 'Escolha seu nome');
-  for i in 1..4 loop perform chamados.abrir_chamado_publico(4, tam, 1, 'spam ' || i, 0); end loop;
-  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(4, %L, 1, %L, 0)', tam, 'sexto'), 'Muitos chamados');
+  -- cadastrada no mesmo setor (sem acento/maiúsculas) e setor "Outro"
+  perform chamados.abrir_chamado_publico(4, null, 'TAMIRA', 'Advogada', 1, 'Juris lento', 0);
+  perform chamados.abrir_chamado_publico(null, 'Comercial', 'Pedro Novo', 'Vendedor', 1, 'CRM caiu', 2);
+  perform chamados.abrir_chamado_publico(3, null, 'Tamira', 'Advogada', 1, 'Outro setor', 0);
+  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(4, null, %L, %L, 1, %L, 0, array[%L])', 'Ana Paula', 'Analista', 'x', 'publico/0b5f8e1e-1111-4a2b-9c3d-000000000001.png'), 'Print inválido');
+  perform pg_temp.falha(format('select chamados.abrir_chamado_publico(4, null, %L, %L, 1, %L, 0, array[%L])', 'Ana Paula', 'Analista', 'x', '00000000-0000-0000-0000-00000000000a/p1.png'), 'Print inválido');
+  -- setor, nome e cargo obrigatórios
+  perform pg_temp.falha($q$select chamados.abrir_chamado_publico(null, null, 'Ana Paula', 'Analista', 1, 'x', 0)$q$, 'Informe seu setor');
+  perform pg_temp.falha($q$select chamados.abrir_chamado_publico(null, ' ', 'Ana Paula', 'Analista', 1, 'x', 0)$q$, 'Informe seu setor');
+  perform pg_temp.falha($q$select chamados.abrir_chamado_publico(99, null, 'Ana Paula', 'Analista', 1, 'x', 0)$q$, 'Informe seu setor');
+  perform pg_temp.falha($q$select chamados.abrir_chamado_publico(4, null, '  ', 'Analista', 1, 'x', 0)$q$, 'Informe seu nome');
+  perform pg_temp.falha($q$select chamados.abrir_chamado_publico(4, null, 'Al', 'Analista', 1, 'x', 0)$q$, 'Informe seu nome');
+  perform pg_temp.falha($q$select chamados.abrir_chamado_publico(4, null, 'Ana Paula', null, 1, 'x', 0)$q$, 'Informe seu cargo');
+  perform pg_temp.falha($q$select chamados.abrir_chamado_publico(4, null, 'Ana Paula', 'A', 1, 'x', 0)$q$, 'Informe seu cargo');
+  -- limite por nome (sem acento/maiúsculas): Maria já tem 1
+  for i in 1..4 loop perform chamados.abrir_chamado_publico(4, null, 'maria da silva', 'Estagiária', 1, 'spam ' || i, 0); end loop;
+  perform pg_temp.falha($q$select chamados.abrir_chamado_publico(4, null, 'Maria da Sílva', 'Estagiária', 1, 'sexto', 0)$q$, 'Muitos chamados');
+  -- versão antiga (lista de nomes) não roda mais
+  perform pg_temp.falha($q$select chamados.abrir_chamado_publico(4, gen_random_uuid(), 1, 'x', 0)$q$, 'permission denied');
 end $$;
 reset role;
 select pg_temp.como('');
-create temp table ids as select (select id from chamados.pessoas where nome = 'Aldo') aldo, (select id from chamados.pessoas where nome = 'Inativo Teste') ina;
-grant select on ids to anon;
+do $$ begin
+  if (select solicitante_id from chamados.chamados where descricao = 'Juris lento') is distinct from (select id from chamados.pessoas where nome = 'Tamira')
+     then raise exception 'não ligou ao cadastro do mesmo setor'; end if;
+  if (select solicitante_id from chamados.chamados where descricao = 'Outro setor') is not null then raise exception 'ligou a cadastro de outro setor'; end if;
+  if (select solicitante_nome || '|' || solicitante_cargo || '|' || setor_id from chamados.chamados where descricao = 'Sem login: notebook') <> 'Maria da Silva|Estagiária|4'
+     then raise exception 'texto limpo no chamado'; end if;
+  if (select setor_id is null and setor_outro = 'Comercial' from chamados.chamados where descricao = 'CRM caiu') is not true then raise exception 'setor Outro'; end if;
+  if (select count(*) from chamados.eventos e join chamados.chamados c on c.id = e.chamado_id where c.descricao = 'CRM caiu' and e.autor_id is null) <> 1 then raise exception 'evento sem autor'; end if;
+  if (select count(*) from chamados.pessoas) <> 23 then raise exception 'abertura pública cadastrou pessoa'; end if;
+  if (select grupo from chamados.sistemas where nome = 'Outro / não sei (suporte)') <> 'suporte' then raise exception 'Outro de suporte'; end if;
+end $$;
 set role anon;
-select pg_temp.falha(format('select chamados.abrir_chamado_publico(4, %L, 1, %L, 0)', (select aldo from ids), 'x'), 'Escolha seu nome');
-select pg_temp.falha(format('select chamados.abrir_chamado_publico(4, %L, 1, %L, 0)', (select ina from ids), 'x'), 'Escolha seu nome');
 select pg_temp.falha($q$select count(*) from chamados.chamados$q$, 'permission denied');
 select pg_temp.falha($q$select count(*) from chamados.pessoas$q$, 'permission denied');
 select pg_temp.falha($q$select chamados.abrir_chamado(1, 'x', 0)$q$, 'permission denied');
@@ -220,6 +235,8 @@ select pg_temp.falha($q$select chamados.gerar_link_chamado('crm')$q$, 'Entre em 
 select pg_temp.como('00000000-0000-0000-0000-0000000000a1');
 select pg_temp.falha($q$select chamados.gerar_link_chamado('crm', null, jsonb_build_object('x', (select string_agg(md5(i::text), '') from generate_series(1, 100) i)))$q$, 'Contexto grande demais');
 reset role;
+-- RH sem cargo para este vínculo: o formulário pede o cargo
+update chamados.convites set cargo = null where nome = 'Sem Vinculo RH';
 
 set role anon;
 select pg_temp.como('');
@@ -235,21 +252,24 @@ do $$ declare t text; l jsonb; c jsonb; begin
     raise exception 'ler_convite novo: %', l;
   end if;
   -- setor informado no formulário é ignorado quando o convite já traz o setor
-  c := chamados.abrir_chamado_por_convite(t, 1, 2, 'CRM não salva negócio', 2);
+  c := chamados.abrir_chamado_por_convite(t, 1, null, 2, 'CRM não salva negócio', 2);
   if c->>'protocolo' is null then raise exception 'abrir por convite'; end if;
-  perform pg_temp.falha(format('select chamados.abrir_chamado_por_convite(%L, null, 2, %L, 1)', t, 'de novo'), 'Link inválido');
+  perform pg_temp.falha(format('select chamados.abrir_chamado_por_convite(%L, null, null, 2, %L, 1)', t, 'de novo'), 'Link inválido');
   perform pg_temp.falha(format('select chamados.ler_convite(%L)', t), 'Link inválido');
 
   select token into t from tokens where quem = 'semrh';
   l := chamados.ler_convite(t);
   if not (l->>'precisa_setor')::boolean or l->>'setor' is not null or l->>'sistema_origem' <> 'Connect Academy' then raise exception 'ler_convite semrh: %', l; end if;
-  perform pg_temp.falha(format('select chamados.abrir_chamado_por_convite(%L, null, 16, %L, 1)', t, 'x'), 'Informe seu setor');
-  c := chamados.abrir_chamado_por_convite(t, 3, 16, 'Academy fora do ar', 1);
+  if l->>'cargo' is not null then raise exception 'semrh sem cargo do RH: %', l; end if;
+  perform pg_temp.falha(format('select chamados.abrir_chamado_por_convite(%L, 3, null, 16, %L, 1)', t, 'x'), 'Informe seu cargo');
+  perform pg_temp.falha(format('select chamados.abrir_chamado_por_convite(%L, null, %L, 16, %L, 1)', t, 'Assistente', 'x'), 'Informe seu setor');
+  c := chamados.abrir_chamado_por_convite(t, 3, ' Assistente ', 16, 'Academy fora do ar', 1);
+  perform pg_temp.falha(format('select chamados.abrir_chamado_por_convite(%L, 3, 16, %L, 1)', t, 'antiga'), 'permission denied');
 
   select token into t from tokens where quem = 'tamira';
   l := chamados.ler_convite(t);
   if l->>'nome' <> 'Tamira' or l->>'setor' <> 'Jurídico' then raise exception 'ler_convite tamira: %', l; end if;
-  c := chamados.abrir_chamado_por_convite(t, null, 1, 'Intimações vazias', 3);
+  c := chamados.abrir_chamado_por_convite(t, null, 'Advogada', 1, 'Intimações vazias', 3);
 end $$;
 reset role;
 
@@ -263,6 +283,9 @@ do $$ declare n int; begin
   if (select contexto->>'navegador' from chamados.chamados where descricao = 'CRM não salva negócio') <> 'Chrome'
      or (select contexto->>'tela' from chamados.chamados where descricao = 'CRM não salva negócio') <> 'https://crm.exemplo/negocios/42'
      or (select sistema_origem from chamados.chamados where descricao = 'CRM não salva negócio') <> 'crm' then raise exception 'contexto do chamado'; end if;
+  if (select solicitante_cargo from chamados.chamados where descricao = 'CRM não salva negócio') <> 'Advogado'
+     or (select solicitante_cargo from chamados.chamados where descricao = 'Academy fora do ar') <> 'Assistente'
+     or (select setor_id from chamados.chamados where descricao = 'Academy fora do ar') <> 3 then raise exception 'cargo/setor do convite'; end if;
   if (select count(*) from chamados.convites where usado_em is not null and chamado_id is not null) <> 3 then raise exception 'uso único'; end if;
   -- expirado
   update chamados.convites set expira_em = now() - interval '1 minute' where usado_em is null;

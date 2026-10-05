@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { faltando, filtrarPrints, iniciais, mensagemErro, quando, titulo } from './formato';
+import { faltaSolicitante, faltando, filtrarPrints, iniciais, limparTexto, mensagemErro, quando, SETOR_OUTRO, titulo } from './formato';
 
 describe('iniciais', () => {
   it('usa primeira letra de nome e sobrenome', () => expect(iniciais('Brenno Magalhães')).toBe('BM'));
@@ -39,4 +39,20 @@ describe('mensagemErro', () => {
   it('repassa mensagens das RPCs', () =>
     expect(mensagemErro({ message: 'Este chamado já foi assumido ou resolvido.' })).toBe('Este chamado já foi assumido ou resolvido.'));
   it('usa padrão para o resto', () => expect(mensagemErro({ message: 'xyz' }, 'P')).toBe('P'));
+});
+
+describe('limparTexto', () => {
+  it('tira espaços nas pontas e repetidos', () => expect(limparTexto('  Maria   da  Silva ')).toBe('Maria da Silva'));
+});
+
+describe('faltaSolicitante', () => {
+  const ok = { setor: '4', setorOutro: '', nome: 'Maria Silva', cargo: 'Analista' };
+  it('completo', () => expect(faltaSolicitante(ok)).toEqual([]));
+  it('tudo vazio', () => expect(faltaSolicitante({ setor: '', setorOutro: '', nome: ' ', cargo: '' })).toEqual(['seu setor', 'seu nome', 'seu cargo']));
+  it('"Outro" exige o setor digitado', () => {
+    expect(faltaSolicitante({ ...ok, setor: SETOR_OUTRO })).toEqual(['seu setor']);
+    expect(faltaSolicitante({ ...ok, setor: SETOR_OUTRO, setorOutro: 'Comercial' })).toEqual([]);
+  });
+  it('tamanhos mínimos iguais aos do banco', () => expect(faltaSolicitante({ ...ok, nome: 'Al', cargo: 'A' })).toEqual(['seu nome', 'seu cargo']));
+  it('convite: só o que for pedido', () => expect(faltaSolicitante({ setor: '', setorOutro: '', nome: '', cargo: '' }, false, false, true)).toEqual(['seu cargo']));
 });

@@ -32,12 +32,11 @@ function extensao(f: File): string {
   return ({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' } as Record<string, string>)[f.type] ?? 'img';
 }
 
-/** Catálogo do formulário para quem não está logado (só nome e setor dos solicitantes). */
+/** Catálogo do formulário para quem não está logado (sem nomes de pessoas). */
 export async function carregarCatalogoPublico(): Promise<Catalogo> {
   const { data, error } = await supabase.rpc('catalogo_publico');
   if (error) throw error;
-  const c = data as Omit<Catalogo, 'pessoas'> & { pessoas: { id: string; nome: string; setor_id: number }[] };
-  return { ...c, pessoas: c.pessoas.map((p) => ({ ...p, papel: 'solicitante', ativo: true })) };
+  return { ...(data as Omit<Catalogo, 'pessoas'>), pessoas: [] };
 }
 
 export interface ChamadoAberto { protocolo: string; sistema_id: number; urgencia: Urgencia; prints: number; prazo_assumir_em: string; prazo_em: string }
@@ -68,11 +67,16 @@ export async function lerConvite(token: string): Promise<Convite> {
 }
 
 /**
- * Abre o chamado. Com login (time): em nome de quem está logado. Sem login: em nome do
- * solicitante escolhido na lista, ou de quem veio pelo token do hub; prints na pasta publico/.
+ * Abre o chamado. Com login (time): em nome de quem está logado. Sem login: com setor, nome e
+ * cargo digitados, ou de quem veio pelo token do hub; prints na pasta publico/.
  */
+export type QuemAbre =
+  | { userId: string }
+  | { setorId: number | null; setorOutro: string; nome: string; cargo: string }
+  | { token: string; setorId: number | null; cargo: string | null };
+
 export async function abrirChamado(
-  quem: { userId: string } | { setorId: number; solicitanteId: string } | { token: string; setorId: number | null },
+  quem: QuemAbre,
   dados: DadosChamado,
 ): Promise<ChamadoAberto> {
   const logado = 'userId' in quem;
@@ -82,8 +86,10 @@ export async function abrirChamado(
     const { data, error } = logado
       ? await supabase.rpc('abrir_chamado', base)
       : 'token' in quem
-        ? await supabase.rpc('abrir_chamado_por_convite', { p_token: quem.token, p_setor_id: quem.setorId, ...base })
-        : await supabase.rpc('abrir_chamado_publico', { p_setor_id: quem.setorId, p_solicitante_id: quem.solicitanteId, ...base });
+        ? await supabase.rpc('abrir_chamado_por_convite', { p_token: quem.token, p_setor_id: quem.setorId, p_cargo: quem.cargo, ...base })
+        : await supabase.rpc('abrir_chamado_publico', {
+            p_setor_id: quem.setorId, p_setor_outro: quem.setorId === null ? quem.setorOutro : null,
+            p_nome: quem.nome, p_cargo: quem.cargo, ...base });
     if (error) throw error;
     const c = data as ChamadoAberto & { prints: number | string[] };
     return { ...c, prints: Array.isArray(c.prints) ? c.prints.length : c.prints };

@@ -1,4 +1,4 @@
-import { MUITO_URGENTE, type Chamado } from './tipos';
+import { MUITO_URGENTE, type Chamado, type Pessoa, type Setor } from './tipos';
 import { atrasado } from './sla';
 
 export type Filtro = 'abertos' | 'livres' | 'meus' | 'resolvidos';
@@ -40,5 +40,22 @@ export function indicadores(chamados: Chamado[], eu: string, agora = Date.now())
     muitoUrgente: abertos.filter((c) => c.urgencia === MUITO_URGENTE).length,
     meus: abertos.filter((c) => c.responsavel_id === eu).length,
     atrasados: abertos.filter((c) => atrasado(c, agora)).length,
+  };
+}
+
+/**
+ * Quem abriu: o cadastro, quando o chamado está ligado a um; senão o que foi digitado.
+ * `setorChave` agrupa o Analytics: id do setor, 'outro' (digitado) ou 'dev' (time sem setor).
+ */
+export function quemAbriu(c: Chamado, pessoas: Map<string, Pessoa>, setores: Setor[]) {
+  const p = c.solicitante_id ? pessoas.get(c.solicitante_id) : undefined;
+  const setorId = c.setor_id ?? p?.setor_id ?? null;
+  const setor = setorId !== null ? setores.find((s) => s.id === setorId)?.nome ?? null : c.setor_outro ?? null;
+  return {
+    nome: p?.nome ?? c.solicitante_nome ?? '—',
+    cargo: c.solicitante_cargo ?? c.contexto?.cargo ?? null,
+    setor,
+    setorChave: setorId !== null ? String(setorId) : c.setor_outro ? 'outro' : 'dev',
+    cadastrado: !!p,
   };
 }

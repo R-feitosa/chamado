@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { agir, type Acao } from '../lib/api';
-import { FILTROS, indicadores, noFiltro, ordenar, type Filtro } from '../lib/fila';
+import { FILTROS, indicadores, noFiltro, ordenar, quemAbriu, type Filtro } from '../lib/fila';
 import { duracao, inicioDoPeriodo, resolvidosNoPeriodo, tempoDaFila, temposMedios } from '../lib/analytics';
 import { formatoPct, situacaoPrazo, taxaAssumidoNoPrazo, taxaNoPrazo, textoPrazo } from '../lib/sla';
 import { hojePorExtenso, iniciais, mensagemErro, titulo } from '../lib/formato';
@@ -40,7 +40,6 @@ export function Painel({ eu, catalogo, chamados }: Props) {
   const [ampliado, setAmpliado] = useState<string | null>(null);
 
   const pessoa = useMemo(() => new Map(catalogo.pessoas.map((p) => [p.id, p])), [catalogo]);
-  const setor = useMemo(() => new Map(catalogo.setores.map((s) => [s.id, s.nome])), [catalogo]);
   const sistema = useMemo(() => new Map(catalogo.sistemas.map((s) => [s.id, s.nome])), [catalogo]);
   const sistemaHub = useMemo(() => new Map(catalogo.sistemas.filter((s) => s.hub_codigo).map((s) => [s.hub_codigo!, s.nome])), [catalogo]);
 
@@ -100,7 +99,7 @@ export function Painel({ eu, catalogo, chamados }: Props) {
         {!lista.length ? (
           <div className="empty">{chamados.length ? 'Nada neste filtro.' : 'Nenhum chamado ainda. Abra o primeiro na aba "Abrir chamado".'}</div>
         ) : lista.map((c) => {
-          const sol = pessoa.get(c.solicitante_id);
+          const sol = quemAbriu(c, pessoa, catalogo.setores);
           const resp = c.responsavel_id ? pessoa.get(c.responsavel_id) : undefined;
           const res = c.status === 'resolvido';
           const bloqueado = ocupado === c.id;
@@ -113,7 +112,7 @@ export function Painel({ eu, catalogo, chamados }: Props) {
               <div style={{ minWidth: 0 }}>
                 <div className={`t${res ? ' res' : ''}`} title={c.descricao}>{titulo(c.descricao)}</div>
                 <div className="sub">
-                  {sol?.nome ?? '—'}{sol?.setor_id ? ` · ${setor.get(sol.setor_id)}` : ''}
+                  {sol.nome}{sol.cargo ? ` · ${sol.cargo}` : ''}{sol.setor ? ` · ${sol.setor}` : ''}
                 </div>
                 {c.descricao.length > 90 && <div className="desc">{c.descricao}</div>}
                 {(c.sistema_origem || c.contexto) && <OrigemHub c={c} nome={c.sistema_origem ? sistemaHub.get(c.sistema_origem) ?? c.sistema_origem : null} />}
