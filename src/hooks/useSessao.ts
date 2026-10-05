@@ -6,7 +6,7 @@ import type { Catalogo, Pessoa } from '../lib/tipos';
 
 /**
  * Sem login: modo público (abre chamado escolhendo o nome na lista).
- * Com login: só o time de dev/suporte usa; outras contas caem em 'sem-acesso'.
+ * Com login: time de dev/suporte e o gestor (Central de Gamificação); outras contas caem em 'sem-acesso'.
  */
 export type EstadoSessao =
   | { fase: 'carregando' }
@@ -14,7 +14,8 @@ export type EstadoSessao =
   | { fase: 'nova-senha' }
   | { fase: 'sem-acesso'; email: string; catalogo: Catalogo }
   | { fase: 'erro'; mensagem: string }
-  | { fase: 'dev'; sessao: Session; eu: Pessoa; catalogo: Catalogo };
+  | { fase: 'dev'; sessao: Session; eu: Pessoa; catalogo: Catalogo }
+  | { fase: 'gestor'; sessao: Session; eu: Pessoa; catalogo: Catalogo };
 
 export function useSessao(): EstadoSessao {
   const [estado, setEstado] = useState<EstadoSessao>({ fase: 'carregando' });
@@ -42,7 +43,10 @@ export function useSessao(): EstadoSessao {
       try {
         const eu = await vincularConta();
         if (!vivo || atual !== sessao.user.id) return;
-        if (eu?.papel === 'dev') {
+        if (eu?.gestor) {
+          const catalogo = await carregarCatalogo();
+          if (vivo) setEstado({ fase: 'gestor', sessao, eu, catalogo });
+        } else if (eu?.papel === 'dev') {
           const catalogo = await carregarCatalogo();
           if (vivo) setEstado({ fase: 'dev', sessao, eu, catalogo });
         } else {

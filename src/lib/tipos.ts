@@ -3,7 +3,7 @@ export type Status = 'aberto' | 'andamento' | 'resolvido';
 export type Urgencia = 0 | 1 | 2 | 3;
 
 export interface Setor { id: number; nome: string; ordem: number }
-export interface Pessoa { id: string; nome: string; setor_id: number | null; papel: Papel; ativo: boolean }
+export interface Pessoa { id: string; nome: string; setor_id: number | null; papel: Papel; ativo: boolean; gestor?: boolean }
 export interface Sistema { id: number; nome: string; ordem: number; ativo: boolean; grupo: Grupo; hub_codigo?: string | null }
 export type Grupo = 'sistema' | 'suporte';
 export interface NivelUrgencia { nivel: Urgencia; nome: string; descricao: string }
@@ -33,6 +33,7 @@ export interface Chamado {
   atualizado_em: string;
   resolvido_em: string | null;
   sistema_origem?: string | null;
+  justificativa_atraso?: string | null;
   contexto?: Record<string, string> | null;
 }
 

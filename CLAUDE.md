@@ -21,6 +21,12 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
 - **Painel do time** (dev/suporte, tela inicial após o login): contagens (em aberto, sem responsável, atrasados, meus), tempos (espera média sem responsável, mais antigo em aberto, % assumidos e % resolvidos no prazo nos últimos 30 dias), fila com coluna "Prazo" (etapa atual: assumir em X / resolver em X / atrasado X, e há quanto tempo está aberto), botões Assumir / Resolver / Reabrir, prints com ampliação.
 - **Analytics** (dev/suporte): período (7/30/90 dias/tudo); % assumidos e resolvidos no prazo; comparação Desenvolvimento × Suporte técnico; resolvidos por técnico (barras + % no prazo + tempo médio); mapas de calor técnico × sistema e técnico × setor de quem abriu.
 - Dev logado também pode abrir chamado (em nome próprio).
+- **Gamificação** (detalhes em `docs/GAMIFICACAO.md`; chave geral na Central, começa desligada):
+  - **Minha jornada** (dev): nível/XP, ranking, Performance Score, sequências, missões, conquistas próximas, medalhas, feed, histórico de XP, títulos/molduras.
+  - **Ranking** (dev e gestor): período × critério (padrão: score composto), temporadas encerradas congeladas; perfil de cada técnico.
+  - **Central de Gamificação** (só gestor): chave, regras de XP, multiplicadores, score e limites, níveis, conquistas, missões, temporadas, recompensas, revisão de suspeitas, auditoria.
+  - **Gestor** (`pessoas.gestor`, hoje Roneely): entra com a conta ATLAS; vê Ranking, Analytics e a Central; não assume nem pontua.
+- Fluxo novo usado pela gamificação: **avaliação** (1–5 estrelas + elogio) com código secreto gerado na abertura sem login (link "avaliar depois"), **pedir ajuda** a colega (o colega confirma), **justificar atraso**, **reabrir com motivo** (não estava resolvido / voltou / outro).
 
 ## Sistemas atendidos
 - **Sistemas:** ATLAS JURIS, CRM, ATLAS RH, Atlas Consult, ATLAS Empresas, Atlas Trib, Rfast Mail, Agente WhatsApp, App Connect Valley, Site Feitosa Imóveis, Site do escritório, Connect Academy, Atlas Cash, Atlas Hub, Atlas Imóveis, Legal Ops, Atlas Ponto, R. Feitosa Ops, Outro / não sei.
@@ -48,8 +54,10 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
 - Projeto **ATLAS - INTEGRADO** (`ashxrwwlcarvqdigoxsi`), compartilhado com os outros sistemas do grupo.
 - Tudo da Central fica no schema **`chamados`**. Não criar nada em `public` nem em outros schemas.
   Únicas exceções, exigidas pelo Supabase: bucket privado `chamados-prints` (+ policies em `storage.objects`
-  filtradas por esse bucket) e `chamados.chamados` na publicação `supabase_realtime`.
-- Tabelas: `setores`, `pessoas` (nome, setor, papel solicitante/dev, e-mail de login), `sistemas`, `chamados`, `eventos` (histórico).
+  filtradas por esse bucket), `chamados.chamados` na publicação `supabase_realtime` e os dois agendamentos do `pg_cron`
+  (`chamados-gam-ciclo`, `chamados-gam-periodos`, em `cron.job`) que rodam o motor da gamificação.
+- Tabelas: `setores`, `pessoas` (nome, setor, papel solicitante/dev, `gestor`, e-mail de login), `sistemas`, `chamados`, `eventos` (histórico, `detalhe`), `avaliacoes`, `colaboracoes`.
+- Gamificação: tabelas `gam_*` (config, regras, multiplicadores, níveis, conquistas/tiers, missões, temporadas, recompensas, fila `gam_eventos`, ledger `gam_xp`, perfis, sequências, resultados de missão, ranking congelado, notificações, suspeitas, auditoria). Escrita só pelo motor/RPCs `gam_*`; `pg_cron` roda `gam_ciclo` (1 min) e `gam_fechar_periodos` (15 min).
 - Login (só dev/suporte): o mesmo `auth.users` dos sistemas ATLAS, ligado à pessoa pelo e-mail no primeiro acesso
   (`chamados.vincular_minha_conta`). Para liberar um dev: preencher `chamados.pessoas.email`.
 - Sem login (papel `anon`), só estas funções, nenhuma tabela:
@@ -57,6 +65,7 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
   - `abrir_chamado_publico(setor_id|null, setor_outro, nome, cargo, …)`: setor (ou "Outro" com texto), nome (3–80) e cargo (2–60) obrigatórios; grava o que foi digitado no chamado (`solicitante_nome`, `solicitante_cargo`, `setor_id`, `setor_outro`) e **não cadastra ninguém**; se o nome bater (sem acento/maiúsculas) com solicitante ativo do mesmo setor, liga `solicitante_id` a ele (senão fica nulo); limite de 5 por nome e 30 no total a cada 10 min; grava `origem = 'publico'`;
   - `consultar_chamado(protocolo)`: situação, prazos e primeiro nome do responsável;
   - `ler_convite(token)` e `abrir_chamado_por_convite(token, setor, cargo, …)`: fluxo do botão do hub (abaixo).
+  - `avaliar_chamado(protocolo, codigo, nota, elogio, comentario)`: só com o código secreto devolvido na abertura (o banco guarda só o hash); 1 vez, chamado resolvido, até 14 dias.
 - **Botão do hub (padrão DISC):** `gerar_link_chamado(sistema, url, contexto)` só para `authenticated` com conta ativa
   (`acessos.eh_usuario_ativo()`); lê nome (`hub.pessoas`), e-mail (`auth.users`), departamento e cargo (`rh.vw_vinculos_atuais`,
   vínculo mais recente) no servidor; grava em `chamados.convites` só o hash SHA-256 do token (32 bytes); limite 20 links/h;
@@ -96,5 +105,6 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
 
 ### Fluxo
 - Solicitante não faz login: informa setor, nome e cargo (obrigatórios, conferidos pelo banco), abre pelo formulário e acompanha pelo protocolo. Dev/suporte faz login e vê todos os chamados.
-- Assumir: dev, chamado sem responsável e não resolvido (grava `assumido_em`, base do "tempo até assumir"). Resolver: só o responsável. Reabrir: qualquer dev; volta para "em andamento" com o mesmo responsável.
+- Assumir: dev, chamado sem responsável e não resolvido (grava `assumido_em`, base do "tempo até assumir"). Resolver: só o responsável. Reabrir: qualquer dev, **com motivo**; volta para "em andamento" com o mesmo responsável.
+- Pedir ajuda: só o responsável, chamado em andamento; o colega aceita ou recusa. Justificar atraso: só o responsável, com o prazo de resolver vencido.
 - Até 3 prints por chamado (PNG, JPG, WEBP, GIF; até 5 MB), gravados em `chamados-prints/publico/…` (sem login) ou `chamados-prints/<user_id>/…` (dev logado).

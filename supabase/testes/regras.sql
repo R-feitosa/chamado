@@ -80,14 +80,14 @@ do $$ begin if (select assumido_em from chamados.chamados where protocolo = 'TI-
 select pg_temp.como('00000000-0000-0000-0000-00000000000c');
 select pg_temp.espera_erro($$select chamados.assumir_chamado((select id from chamados.chamados where protocolo = 'TI-0421'))$$, 'já foi assumido');
 select pg_temp.espera_erro($$select chamados.resolver_chamado((select id from chamados.chamados where protocolo = 'TI-0421'))$$, 'Só o responsável');
-select pg_temp.espera_erro($$select chamados.reabrir_chamado((select id from chamados.chamados where protocolo = 'TI-0421'))$$, 'não está resolvido');
+select pg_temp.espera_erro($$select chamados.reabrir_chamado((select id from chamados.chamados where protocolo = 'TI-0421'), 'recorrente')$$, 'não está resolvido');
 
 -- 6. Responsável resolve; qualquer dev reabre; histórico registra tudo
 select pg_temp.como('00000000-0000-0000-0000-00000000000b');
 select chamados.resolver_chamado((select id from chamados.chamados where protocolo = 'TI-0421'))->>'status';
 select pg_temp.espera_erro($$select chamados.assumir_chamado((select id from chamados.chamados where protocolo = 'TI-0421'))$$, 'já foi assumido');
 select pg_temp.como('00000000-0000-0000-0000-00000000000c');
-select chamados.reabrir_chamado((select id from chamados.chamados where protocolo = 'TI-0421'))->>'status';
+select chamados.reabrir_chamado((select id from chamados.chamados where protocolo = 'TI-0421'), 'recorrente')->>'status';
 do $$ declare a text; begin
   select string_agg(acao::text, ',' order by e.id) into a from chamados.eventos e join chamados.chamados c on c.id = e.chamado_id where c.protocolo = 'TI-0421';
   if a <> 'aberto,assumido,resolvido,reaberto' then raise exception 'histórico %', a; end if;

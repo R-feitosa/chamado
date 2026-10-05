@@ -4,6 +4,7 @@ import { faltaSolicitante, faltando, limparTexto, mensagemErro, SETOR_OUTRO } fr
 import { COR_URGENCIA, NOME_GRUPO, URGENCIAS, URGENCIA_PADRAO, type Catalogo, type Pessoa, type Sistema, type Urgencia } from '../lib/tipos';
 import { minutosPorExtenso } from '../lib/sla';
 import { AnexarPrints, type PrintLocal } from '../componentes/AnexarPrints';
+import { guardarCodigo, linkAvaliacao } from '../lib/avaliacao';
 import { Check, Seta } from '../componentes/Icones';
 
 /**
@@ -101,6 +102,7 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar,
         { sistemaId: sistema, descricao, urgencia, arquivos: prints.map((p) => p.file) });
       if (publico) lembrar({ [CHAVE_SETOR]: setorId, [CHAVE_SETOR_OUTRO]: outro ? limparTexto(setorOutro) : '', [CHAVE_NOME]: limparTexto(nome), [CHAVE_CARGO]: limparTexto(cargo) });
       else if (pedeCargo) lembrar({ [CHAVE_CARGO]: limparTexto(cargo) });
+      if (c.codigo_avaliacao) guardarCodigo(c.protocolo, c.codigo_avaliacao);
       setEnviado(c);
     } catch (err) {
       setErro(mensagemErro(err, 'Não foi possível enviar. Tente de novo.'));
@@ -139,6 +141,7 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar,
             <dt>Resolver até</dt><dd>{fmt(enviado.prazo_em)}</dd>
             <dt>Prints</dt><dd>{enviado.prints ? `${enviado.prints} anexado${enviado.prints > 1 ? 's' : ''}` : 'Nenhum'}</dd>
           </dl>
+          {enviado.codigo_avaliacao && <LinkAvaliar protocolo={enviado.protocolo} codigo={enviado.codigo_avaliacao} />}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="btn sec" type="button" onClick={outro}>Abrir outro chamado</button>
             {onVerPainel && <button className="btn pri" type="button" onClick={onVerPainel}>Ver no painel do time</button>}
@@ -291,5 +294,23 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar,
         </form>
       )}
     </section>
+  );
+}
+
+/** Depois de resolvido, quem abriu avalia o atendimento. O código fica neste navegador; o link serve em outro aparelho. */
+function LinkAvaliar({ protocolo, codigo }: { protocolo: string; codigo: string }) {
+  const [copiado, setCopiado] = useState(false);
+  const link = linkAvaliacao(location.origin, protocolo, codigo);
+  async function copiar() {
+    try { await navigator.clipboard.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000); } catch { /* sem área de transferência: o link está visível */ }
+  }
+  return (
+    <div className="banner" style={{ margin: 0, flexDirection: 'column', alignItems: 'flex-start' }}>
+      <span>Quando o chamado for resolvido, avalie o atendimento em <b>Acompanhar</b>. Neste navegador já fica guardado; para outro aparelho, guarde este link:</span>
+      <span style={{ display: 'flex', gap: 8, width: '100%', flexWrap: 'wrap' }}>
+        <input className="field mono" readOnly value={link} aria-label="Link para avaliar depois" style={{ flex: '1 1 240px', minHeight: 40, fontSize: 12 }} onFocus={(e) => e.target.select()} />
+        <button type="button" className="mini" onClick={() => void copiar()}>{copiado ? 'Copiado' : 'Copiar link'}</button>
+      </span>
+    </div>
   );
 }

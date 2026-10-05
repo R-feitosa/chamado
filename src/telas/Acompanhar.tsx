@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { consultarChamado, type Consulta } from '../lib/api';
+import { avaliarChamado, consultarChamado, type Consulta } from '../lib/api';
+import { codigoDe } from '../lib/avaliacao';
 import { mensagemErro } from '../lib/formato';
 import { situacaoPrazo, textoPrazo } from '../lib/sla';
 import { duracao } from '../lib/analytics';
@@ -18,7 +19,7 @@ function comoChamado(c: Consulta): Chamado {
 }
 
 /** Acompanhamento sem login: pelo protocolo, só situação e prazos (nunca a descrição). */
-export function Acompanhar({ inicial = '' }: { inicial?: string }) {
+export function Acompanhar({ inicial = '', codigoInicial }: { inicial?: string; codigoInicial?: string }) {
   const [protocolo, setProtocolo] = useState(inicial);
   const [resultado, setResultado] = useState<Consulta | null | undefined>(undefined);
   const [erro, setErro] = useState('');
@@ -72,9 +73,50 @@ export function Acompanhar({ inicial = '' }: { inicial?: string }) {
               <dt>Assumir até</dt><dd>{fmt(resultado.prazo_assumir_em)}{resultado.assumido_em && ` · assumido em ${fmt(resultado.assumido_em)}`}</dd>
               <dt>Resolver até</dt><dd>{fmt(resultado.prazo_em)}{resultado.resolvido_em && ` · resolvido em ${fmt(resultado.resolvido_em)}`}</dd>
             </dl>
+            <Avaliacao consulta={resultado} codigo={codigoInicial ?? codigoDe(resultado.protocolo)} onAvaliado={() => void buscar(resultado.protocolo)} />
           </>
         )}
       </div>
     </section>
+  );
+}
+
+const NOTAS = ['Muito ruim', 'Ruim', 'Regular', 'Bom', 'Excelente'];
+
+/** Avaliação do atendimento: só com o código de quem abriu, 1 vez, até 14 dias depois de resolvido. */
+function Avaliacao({ consulta, codigo, onAvaliado }: { consulta: Consulta; codigo: string | null; onAvaliado: () => void }) {
+  const [nota, setNota] = useState(0);
+  const [elogio, setElogio] = useState(false);
+  const [comentario, setComentario] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState('');
+  if (consulta.avaliado) return <p className="banner" style={{ margin: 0 }} role="status">Avaliação registrada. Obrigado por contar como foi o atendimento.</p>;
+  if (!consulta.avaliavel || !codigo) return null;
+  async function enviar(e: FormEvent) {
+    e.preventDefault();
+    if (!nota || enviando || !codigo) return;
+    setEnviando(true); setErro('');
+    try { await avaliarChamado(consulta.protocolo, codigo, nota, elogio, comentario); onAvaliado(); }
+    catch (err) { setErro(mensagemErro(err)); } finally { setEnviando(false); }
+  }
+  return (
+    <form className="aval" onSubmit={enviar}>
+      <b>Como foi o atendimento?</b>
+      <div className="estrelas" role="group" aria-label="Nota de 1 a 5">
+        {NOTAS.map((nome, i) => (
+          <button key={nome} type="button" aria-pressed={nota === i + 1} aria-label={`${i + 1} de 5: ${nome}`} title={nome} onClick={() => setNota(i + 1)}>
+            <svg viewBox="0 0 24 24" fill={nota > i ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3z" /></svg>
+            {i + 1}
+          </button>
+        ))}
+      </div>
+      {nota > 0 && <span className="muted" style={{ fontSize: 13 }}>{NOTAS[nota - 1]}</span>}
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 14 }}>
+        <input type="checkbox" checked={elogio} onChange={(e) => setElogio(e.target.checked)} /> Quero elogiar quem me atendeu
+      </label>
+      <textarea className="field" rows={2} maxLength={500} placeholder="Comentário (opcional)" value={comentario} onChange={(e) => setComentario(e.target.value)} aria-label="Comentário" />
+      {erro && <p className="erro" role="alert">{erro}</p>}
+      <button className="btn pri" type="submit" disabled={!nota || enviando} style={{ alignSelf: 'flex-start' }}>{enviando ? 'Enviando…' : 'Enviar avaliação'}</button>
+    </form>
   );
 }

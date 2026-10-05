@@ -39,7 +39,7 @@ export async function carregarCatalogoPublico(): Promise<Catalogo> {
   return { ...(data as Omit<Catalogo, 'pessoas'>), pessoas: [] };
 }
 
-export interface ChamadoAberto { protocolo: string; sistema_id: number; urgencia: Urgencia; prints: number; prazo_assumir_em: string; prazo_em: string }
+export interface ChamadoAberto { codigo_avaliacao?: string; protocolo: string; sistema_id: number; urgencia: Urgencia; prints: number; prazo_assumir_em: string; prazo_em: string }
 
 async function enviarPrints(pasta: string, arquivos: File[]): Promise<string[]> {
   const caminhos: string[] = [];
@@ -104,6 +104,7 @@ export interface Consulta {
   protocolo: string; status: Chamado['status']; sistema: string; grupo: string; urgencia: Urgencia;
   criado_em: string; assumido_em: string | null; resolvido_em: string | null;
   prazo_assumir_em: string; prazo_em: string; responsavel: string | null;
+  avaliado?: boolean; avaliavel?: boolean;
 }
 
 export async function consultarChamado(protocolo: string): Promise<Consulta | null> {
@@ -112,10 +113,50 @@ export async function consultarChamado(protocolo: string): Promise<Consulta | nu
   return (data as Consulta | null) ?? null;
 }
 
-export type Acao = 'assumir' | 'resolver' | 'reabrir';
+export type Acao = 'assumir' | 'resolver';
 
 export async function agir(acao: Acao, id: string): Promise<void> {
   const { error } = await supabase.rpc(`${acao}_chamado`, { p_id: id });
+  if (error) throw error;
+}
+
+export type MotivoReabertura = 'incompleto' | 'recorrente' | 'outro';
+export const MOTIVOS_REABERTURA: { chave: MotivoReabertura; nome: string; ajuda: string }[] = [
+  { chave: 'incompleto', nome: 'Não estava resolvido', ajuda: 'Foi encerrado sem resolver de fato.' },
+  { chave: 'recorrente', nome: 'O problema voltou', ajuda: 'Estava resolvido, mas aconteceu de novo.' },
+  { chave: 'outro', nome: 'Outro motivo', ajuda: 'Explique no texto.' },
+];
+
+export async function reabrir(id: string, motivo: MotivoReabertura, texto: string): Promise<void> {
+  const { error } = await supabase.rpc('reabrir_chamado', { p_id: id, p_motivo: motivo, p_texto: texto.trim() || null });
+  if (error) throw error;
+}
+
+export async function justificarAtraso(id: string, texto: string): Promise<void> {
+  const { error } = await supabase.rpc('justificar_atraso', { p_id: id, p_texto: texto });
+  if (error) throw error;
+}
+
+export interface Colaboracao { id: number; chamado_id: string; responsavel_id: string; ajudante_id: string; status: 'pedida' | 'confirmada' | 'recusada'; criada_em: string }
+
+export async function listarColaboracoes(): Promise<Colaboracao[]> {
+  const { data, error } = await supabase.from('colaboracoes').select('id,chamado_id,responsavel_id,ajudante_id,status,criada_em').order('id', { ascending: false }).limit(200);
+  if (error) throw error;
+  return (data ?? []) as Colaboracao[];
+}
+
+export async function pedirAjuda(chamado: string, ajudante: string): Promise<void> {
+  const { error } = await supabase.rpc('pedir_ajuda', { p_chamado: chamado, p_ajudante: ajudante });
+  if (error) throw error;
+}
+
+export async function responderAjuda(id: number, aceitar: boolean): Promise<void> {
+  const { error } = await supabase.rpc('responder_ajuda', { p_colaboracao: id, p_aceitar: aceitar });
+  if (error) throw error;
+}
+
+export async function avaliarChamado(protocolo: string, codigo: string, nota: number, elogio: boolean, comentario: string): Promise<void> {
+  const { error } = await supabase.rpc('avaliar_chamado', { p_protocolo: protocolo, p_codigo: codigo, p_nota: nota, p_elogio: elogio, p_comentario: comentario.trim() || null });
   if (error) throw error;
 }
 

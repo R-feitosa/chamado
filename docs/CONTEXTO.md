@@ -48,10 +48,13 @@ src/lib/fila.ts        filtros, ordenação, contagens do painel   │ funções
 src/lib/analytics.ts   tempos médios, por técnico, mapas         │ com testes *.test.ts
 src/lib/formato.ts     textos, validação de prints, mensagens    │
 src/lib/convite.ts     token da URL do botão do hub              ┘
+src/lib/gamificacao.ts nível/progresso (espelha gam_nivel), formatação (com testes); apiGam.ts; hooks/useGamificacao.ts
+src/telas/Jornada, Ranking, CentralGamificacao; componentes/gam/ (Motion, carregados sob demanda)
+docs/GAMIFICACAO.md    arquitetura de eventos, XP, score, antiabuso, operação
 src/telas/             AbrirChamado, Acompanhar, Acesso (login do time), Painel, Analytics, SemCadastro
 src/componentes/       prints (anexar, miniaturas com link assinado, ampliar), urgência, ícones
 integracao/            abrir-chamado.ts + README: como instalar o botão em outro sistema do hub
-supabase/migrations/   8 migrations (todas já aplicadas em produção)
+supabase/migrations/   12 migrations (todas já aplicadas em produção; 4 da gamificação: 20261005140000…170000)
 supabase/testes/       stub do Supabase + regras.sql + antes_/depois_<versão>.sql + rodar.sh
 prototipo/index.html   protótipo original (referência visual)
 ```
@@ -129,3 +132,8 @@ Funções (todas `security definer`, `search_path = ''`, retorno `jsonb`):
 Advogado e gestor; quer acurácia, rastreabilidade (de onde veio cada conclusão), PT-BR, respostas objetivas.
 Antes de mudança grande: mostrar o plano e esperar aprovação. Não alterar listas de pessoas/sistemas sem confirmar.
 Decisões com opções: apresentar caminhos (Conservador | Balanceado | Ousado) com recomendação.
+
+## 11. Gamificação (05/10/2026)
+Ver `docs/GAMIFICACAO.md`. Motor por eventos no banco (fila `gam_eventos` → ledger `gam_xp` idempotente), XP de resolução em
+validação por 72 h, Performance Score composto, antiabuso com revisão do gestor, missões, temporadas e Central de Gamificação.
+Aplicada em produção **com a chave desligada**; quem liga é o gestor (Roneely) na Central. Testes: `supabase/testes/gamificacao.sql`.

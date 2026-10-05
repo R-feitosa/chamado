@@ -17,3 +17,4 @@ for f in supabase/migrations/*.sql; do
   [ -f "supabase/testes/depois_$v.sql" ] && $P -f "supabase/testes/depois_$v.sql"
 done
 $P -o /dev/null -f supabase/testes/regras.sql
+$P -o /dev/null -f supabase/testes/gamificacao.sql

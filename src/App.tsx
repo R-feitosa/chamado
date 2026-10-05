@@ -12,12 +12,26 @@ import { AbrirChamado } from './telas/AbrirChamado';
 import { Acompanhar } from './telas/Acompanhar';
 import { Painel } from './telas/Painel';
 import { Analytics } from './telas/Analytics';
+import { useGamificacao } from './hooks/useGamificacao';
+import { listarTemporadas } from './lib/apiGam';
+import { CentralL as CentralGamificacao, JornadaL as Jornada, RankingL as Ranking, SeloXPL as SeloXP, ToastsL as Toasts } from './componentes/gam/Lazy';
+import { avaliacaoDaUrl, guardarCodigo, urlSemAvaliacao } from './lib/avaliacao';
 
-type Tela = 'abrir' | 'acompanhar' | 'entrar' | 'painel' | 'analytics';
+type Tela = 'abrir' | 'acompanhar' | 'entrar' | 'painel' | 'analytics' | 'jornada' | 'ranking' | 'central' | 'perfil';
 type Aba = { tela: Tela; nome: string };
 
 const ABAS_PUBLICAS: Aba[] = [{ tela: 'abrir', nome: 'Abrir chamado' }, { tela: 'acompanhar', nome: 'Acompanhar' }];
 const ABAS_DEV: Aba[] = [{ tela: 'abrir', nome: 'Abrir chamado' }, { tela: 'painel', nome: 'Painel do time' }, { tela: 'analytics', nome: 'Analytics' }];
+const ABAS_DEV_GAM: Aba[] = [{ tela: 'abrir', nome: 'Abrir chamado' }, { tela: 'painel', nome: 'Painel do time' }, { tela: 'jornada', nome: 'Minha jornada' },
+  { tela: 'ranking', nome: 'Ranking' }, { tela: 'analytics', nome: 'Analytics' }];
+const ABAS_GESTOR: Aba[] = [{ tela: 'ranking', nome: 'Ranking' }, { tela: 'analytics', nome: 'Analytics' }, { tela: 'central', nome: 'Gamificação' }];
+
+/** Temporadas para o filtro do ranking. */
+function useTemporadas(ativo: boolean) {
+  const [t, setT] = useState<{ id: number; nome: string; status: string }[]>([]);
+  useEffect(() => { if (ativo) listarTemporadas().then(setT).catch(() => undefined); }, [ativo]);
+  return t;
+}
 
 function telaDoEndereco(abas: Aba[], extra: Tela[] = []): Tela {
   const h = location.hash.slice(1) as Tela;
@@ -71,9 +85,17 @@ function useConvite(): [EstadoConvite, () => void] {
   return [estado, () => setEstado({ fase: 'nenhum' })];
 }
 
+/** Link "avaliar depois" (?avaliar=TI-0425.<código>): guarda o código, limpa a URL e abre o Acompanhar. */
+function lerAvaliacaoDaUrl() {
+  const a = avaliacaoDaUrl(location.search);
+  if (a) { guardarCodigo(a.protocolo, a.codigo); history.replaceState(null, '', urlSemAvaliacao(location.href)); }
+  return a;
+}
+
 function Publico({ catalogo }: { catalogo: Catalogo }) {
-  const [tela, setTela] = useState<Tela>(() => telaDoEndereco(ABAS_PUBLICAS, ['entrar']));
-  const [protocolo, setProtocolo] = useState('');
+  const [avaliar] = useState(lerAvaliacaoDaUrl);
+  const [tela, setTela] = useState<Tela>(() => (avaliar ? 'acompanhar' : telaDoEndereco(ABAS_PUBLICAS, ['entrar'])));
+  const [protocolo, setProtocolo] = useState(avaliar?.protocolo ?? '');
   const [convite, descartarConvite] = useConvite();
   const ir = (t: Tela) => irPara(t, setTela);
   return (
@@ -93,7 +115,7 @@ function Publico({ catalogo }: { catalogo: Catalogo }) {
               onAcompanhar={(p) => { setProtocolo(p); ir('acompanhar'); }} />
           )}
         </div>
-        {tela === 'acompanhar' && <Acompanhar key={protocolo} inicial={protocolo} />}
+        {tela === 'acompanhar' && <Acompanhar key={protocolo} inicial={protocolo} codigoInicial={avaliar?.protocolo === protocolo ? avaliar.codigo : undefined} />}
         {tela === 'entrar' && (
           <>
             <Acesso />
@@ -113,21 +135,30 @@ function Dev({ eu, userId, catalogo }: { eu: Pessoa; userId: string; catalogo: C
   const [convite, descartarConvite] = useConvite();
   const [tela, setTela] = useState<Tela>(() => {
     if (tokenDaUrl(location.search)) return 'abrir';
-    const t = telaDoEndereco(ABAS_DEV);
+    const t = telaDoEndereco(ABAS_DEV_GAM);
     return t === 'abrir' && !location.hash ? 'painel' : t;
   });
   const { chamados, conexao } = useChamados();
   const [, setTique] = useState(0);
   const abertos = chamados.filter((c) => c.status !== 'resolvido').length;
   const ir = (t: Tela) => irPara(t, setTela);
+  const gam = useGamificacao(true);
+  const gamAtivo = !!gam.jornada?.ativo;
+  const abas = gamAtivo ? ABAS_DEV_GAM : ABAS_DEV;
+  const temporadas = useTemporadas(gamAtivo);
+  const [perfilId, setPerfilId] = useState<string | null>(null);
+  const verPerfil = (id: string) => { if (id === eu.id) { ir('jornada'); return; } setPerfilId(id); ir('perfil'); };
+  // Com a gamificação desligada, telas dela caem no painel.
+  useEffect(() => { if (gam.jornada && !gamAtivo && ['jornada', 'ranking', 'perfil'].includes(tela)) setTela('painel'); }, [gam.jornada, gamAtivo, tela]);
 
   // Atualiza os tempos e prazos a cada minuto.
   useEffect(() => { const t = setInterval(() => setTique((n) => n + 1), 60_000); return () => clearInterval(t); }, []);
 
   return (
     <>
-      <Cabecalho abas={ABAS_DEV} tela={tela} onTela={ir} contador={abertos}>
-        <span className="papel" title={eu.nome}>{eu.nome.split(' ')[0]} · {NOME_PAPEL[eu.papel]}</span>
+      <Cabecalho abas={abas} tela={tela} onTela={ir} contador={abertos}>
+        {gamAtivo && gam.jornada?.perfil ? <SeloXP jornada={gam.jornada} ganho={gam.ganho} onAbrir={() => ir('jornada')} />
+          : <span className="papel" title={eu.nome}>{eu.nome.split(' ')[0]} · {NOME_PAPEL[eu.papel]}</span>}
         <button className="sair" type="button" onClick={() => { history.replaceState(null, '', location.pathname); void supabase.auth.signOut(); }}>Sair</button>
       </Cabecalho>
       <main>
@@ -140,7 +171,34 @@ function Dev({ eu, userId, catalogo }: { eu: Pessoa; userId: string; catalogo: C
               onConviteUsado={descartarConvite} />
           )}
         </div>
-        {tela === 'painel' && <Painel eu={eu} catalogo={catalogo} chamados={chamados} />}
+        {tela === 'painel' && <Painel eu={eu} catalogo={catalogo} chamados={chamados} onAcao={() => void gam.atualizar(true)} />}
+        {tela === 'analytics' && <Analytics catalogo={catalogo} chamados={chamados} />}
+        {tela === 'jornada' && gamAtivo && <Jornada dados={gam.jornada} onLer={gam.lerTudo} onAtualizar={() => void gam.atualizar()} onRanking={() => ir('ranking')} onPerfil={verPerfil} />}
+        {tela === 'ranking' && gamAtivo && <Ranking temporadas={temporadas} onPerfil={verPerfil} />}
+        {tela === 'perfil' && gamAtivo && perfilId && <Jornada pessoaId={perfilId} onPerfil={verPerfil} onVoltar={() => ir('ranking')} onRanking={() => ir('ranking')} />}
+      </main>
+      {gamAtivo && <Toasts itens={gam.toasts} onFechar={gam.fecharToast} />}
+    </>
+  );
+}
+
+/** Gestor: ranking, analytics e Central de Gamificação (não assume nem pontua). */
+function Gestor({ eu, catalogo }: { eu: Pessoa; catalogo: Catalogo }) {
+  const [tela, setTela] = useState<Tela>(() => { const h = location.hash.slice(1) as Tela; return ABAS_GESTOR.some((a) => a.tela === h) ? h : 'central'; });
+  const ir = (t: Tela) => irPara(t, setTela);
+  const { chamados } = useChamados();
+  const temporadas = useTemporadas(true);
+  const [perfilId, setPerfilId] = useState<string | null>(null);
+  return (
+    <>
+      <Cabecalho abas={ABAS_GESTOR} tela={tela} onTela={ir}>
+        <span className="papel" title={eu.nome}>{eu.nome.split(' ')[0]} · Gestor</span>
+        <button className="sair" type="button" onClick={() => { history.replaceState(null, '', location.pathname); void supabase.auth.signOut(); }}>Sair</button>
+      </Cabecalho>
+      <main>
+        {tela === 'central' && <CentralGamificacao />}
+        {tela === 'ranking' && <Ranking temporadas={temporadas} onPerfil={(id) => { setPerfilId(id); ir('perfil'); }} />}
+        {tela === 'perfil' && perfilId && <Jornada pessoaId={perfilId} onVoltar={() => ir('ranking')} onPerfil={(id) => setPerfilId(id)} onRanking={() => ir('ranking')} />}
         {tela === 'analytics' && <Analytics catalogo={catalogo} chamados={chamados} />}
       </main>
     </>
@@ -156,5 +214,6 @@ export function App() {
     case 'sem-acesso': return (<><Cabecalho /><main><SemCadastro email={estado.email} /></main></>);
     case 'erro': return (<><Cabecalho /><main><p className="erro">{estado.mensagem}</p></main></>);
     case 'dev': return <Dev key={estado.eu.id} eu={estado.eu} userId={estado.sessao.user.id} catalogo={estado.catalogo} />;
+    case 'gestor': return <Gestor key={estado.eu.id} eu={estado.eu} catalogo={estado.catalogo} />;
   }
 }
