@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Central de Chamados RFG — brag</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="styles.css">
+<style>
+  *{transition:none!important;animation:none!important}
+  html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#f6f7f9}
+  #stage{position:relative;width:1920px;height:1080px;overflow:hidden;background:var(--bg)}
+  .layer{position:absolute;inset:0;opacity:0;will-change:opacity,transform}
+  .cam{position:absolute;left:0;top:0;width:1200px;transform-origin:0 0;background:var(--bg)}
+  .cam .top{position:relative}
+  .cam main{padding-top:32px}
+  /* gancho */
+  #s1{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;text-align:center}
+  #s1 .glow{position:absolute;width:1400px;height:1400px;border-radius:999px;left:50%;top:50%;margin:-700px 0 0 -700px;
+    background:radial-gradient(closest-side,color-mix(in srgb,var(--accent) 13%,transparent),transparent 70%)}
+  #s1 .grid{position:absolute;inset:0;background-image:radial-gradient(color-mix(in srgb,var(--accent) 22%,transparent) 1.4px,transparent 1.6px);background-size:36px 36px;
+    -webkit-mask-image:radial-gradient(closest-side,#000 30%,transparent 85%);mask-image:radial-gradient(closest-side,#000 30%,transparent 85%)}
+  #s1 .pill{font-size:30px;padding:12px 26px;background:var(--accent-soft);color:var(--accent-ink);position:relative}
+  #s1 h1{font-size:118px;line-height:1.04;font-weight:600;letter-spacing:-.035em;max-width:1500px;position:relative}
+  #s1 h1 span{display:inline-block;margin:0 .12em}
+  #s1 h1 .az{color:var(--accent)}
+  #s1 .brand{text-align:left;position:absolute;left:72px;top:60px;transform:scale(1.5);transform-origin:0 0}
+  /* legenda */
+  .cap{position:absolute;left:50%;bottom:58px;background:#0e1116;color:#fff;font-size:36px;font-weight:600;letter-spacing:-.015em;
+    padding:18px 34px;border-radius:999px;box-shadow:0 18px 50px rgba(14,17,22,.28);white-space:nowrap;opacity:0;z-index:40}
+  .cap b{color:#9fb0ff;font-weight:600}
+  /* cursor */
+  #cursor{position:absolute;left:0;top:0;width:44px;height:44px;z-index:60;opacity:0;transform-origin:6px 4px}
+  #ripple{position:absolute;width:80px;height:80px;margin:-40px 0 0 -40px;border-radius:999px;border:4px solid var(--accent);opacity:0;z-index:59}
+  /* sucesso */
+  #s3{display:flex;align-items:flex-start;justify-content:center}
+  #s3 .done{width:640px;transform-origin:50% 0;position:absolute;top:66px;left:50%;margin-left:-320px;box-shadow:0 30px 80px rgba(14,17,22,.10)}
+  #s3 dd.hl{background:var(--accent-soft);border-radius:8px;margin:-3px -8px;padding:3px 8px;color:var(--accent-ink)}
+  /* painel */
+  .row.novo{background:color-mix(in srgb,var(--accent-soft) var(--hl,0%),var(--surface))}
+  .rowwrap{overflow:hidden}
+  .toasts{position:absolute;right:70px;bottom:190px;width:360px;transform:scale(1.55);transform-origin:100% 100%;justify-content:flex-end}
+  .tw{overflow:hidden}
+  .tw .toast{margin-top:10px}
+  .selo{transform-origin:50% 50%}
+  .flutua{top:-10px}
+  /* fecho */
+  #s6{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;text-align:center}
+  #s6 .mark{width:132px;height:132px;border-radius:36px;font-size:44px}
+  #s6 h2{font-size:104px;font-weight:600;letter-spacing:-.035em;line-height:1.05}
+  #s6 .tag{font-size:52px;font-weight:500;color:var(--ink2);letter-spacing:-.02em;display:flex;gap:22px}
+  #s6 .tag span:last-child{color:var(--accent)}
+  #s6 small{font-size:26px;color:var(--ink3);letter-spacing:.02em}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- 1 · Gancho: copy real do hero -->
+  <section class="layer" id="s1">
+    <div class="glow"></div><div class="grid"></div>
+    <div class="brand"><span class="mark">RFG</span><div><b>Central de chamados</b><small>R. Feitosa Group</small></div></div>
+    <span class="pill" id="h-pill">Leva menos de 1 minuto</span>
+    <h1 id="h-title"><span>Algum</span><span class="az">sistema</span><span>ou</span><span class="az">equipamento</span><span>deu</span><span>problema?</span></h1>
+  </section>
+
+  <!-- 2 · Formulário real -->
+  <section class="layer" id="s2">
+    <div class="cam" id="cam2">
+      <header class="top"><div class="top-in">
+        <div class="brand"><span class="mark">RFG</span><div><b>Central de chamados</b><small>R. Feitosa Group</small></div></div>
+        <div class="conta">
+          <div class="tabs" role="tablist"><button class="tab" aria-selected="true">Abrir chamado</button><button class="tab" aria-selected="false">Acompanhar</button></div>
+          <button type="button" class="entrar"><span>É dev/suporte? </span><b>Entrar</b></button>
+        </div>
+      </div></header>
+      <main><section>
+        <div class="hero">
+          <span class="pill" style="align-self:flex-start;background:var(--accent-soft);color:var(--accent-ink)">Leva menos de 1 minuto</span>
+          <h1>Algum sistema ou equipamento deu problema?</h1>
+          <p>Conte o que aconteceu e o chamado chega na hora para o time de desenvolvimento e suporte.</p>
+        </div>
+        <form class="wrap" onsubmit="return false">
+          <div class="card form" id="form">
+            <div class="dupla">
+              <div class="grp"><label class="lbl">Seu setor <span class="obrig">*</span></label>
+                <div class="field" style="display:flex;justify-content:space-between;align-items:center">Jurídico <span class="muted">▾</span></div></div>
+            </div>
+            <div class="dupla">
+              <div class="grp"><label class="lbl">Seu nome <span class="obrig">*</span></label><div class="field">Ana Souza</div></div>
+              <div class="grp"><label class="lbl">Seu cargo <span class="obrig">*</span></label><div class="field">Advogada</div></div>
+            </div>
+            <div class="grp" id="g-onde">
+              <span class="lbl">Onde está o problema?</span>
+              <div class="grp" style="gap:8px"><span class="sub">Sistemas (desenvolvimento)</span><div class="sis" id="sis-dev"></div></div>
+              <div class="grp" style="gap:8px"><span class="sub">Suporte técnico (computador, impressora, e-mail, acessos)</span><div class="sis" id="sis-sup"></div></div>
+            </div>
+            <div class="grp" id="g-desc">
+              <label class="lbl">O que aconteceu?</label>
+              <div class="field" id="desc" style="min-height:118px;white-space:pre-wrap"></div>
+            </div>
+            <div class="grp">
+              <span class="lbl">Prints da tela <span class="muted" style="font-weight:400">· opcional, até 3</span></span>
+              <label class="drop"><span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></span>
+                <span><b>Clique para escolher</b>, arraste a imagem aqui ou cole com Ctrl+V</span></label>
+            </div>
+            <div class="grp" id="g-urg">
+              <span class="lbl">Qual a urgência?</span>
+              <div class="seg urg" id="seg"></div>
+              <p class="explica" id="explica"></p>
+            </div>
+            <div class="foot">
+              <button class="btn pri" type="button" id="enviar">Enviar chamado <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+              <span class="muted" style="font-size:14px" id="falta"></span>
+            </div>
+          </div>
+          <aside class="card side" id="side" style="position:relative;top:0">
+            <div style="display:flex;justify-content:space-between"><b style="font-size:14px">Seu chamado</b><span class="mono muted" style="font-size:13px" id="feitos"></span></div>
+            <div class="bar"><i id="barra"></i></div>
+            <div style="display:flex;flex-direction:column;gap:12px" id="steps"></div>
+          </aside>
+        </form>
+      </section></main>
+    </div>
+  </section>
+
+  <!-- 3 · Protocolo e prazos -->
+  <section class="layer" id="s3">
+    <div class="card done" id="done">
+      <span class="pill u0" style="align-self:flex-start;font-size:13px">Chamado enviado</span>
+      <h2 style="font-size:26px;font-weight:600">Recebemos seu chamado</h2>
+      <p class="muted" style="margin:0">O time foi avisado e já vê o chamado no painel. <b style="color:var(--ink)">Guarde o protocolo</b> para acompanhar.</p>
+      <dl>
+        <dt>Protocolo</dt><dd class="mono" style="font-size:18px" id="proto">TI-0425</dd>
+        <dt>Aberto por</dt><dd>Ana Souza<span class="muted"> · Jurídico</span></dd>
+        <dt>Onde</dt><dd>ATLAS JURIS</dd>
+        <dt>Urgência</dt><dd>Urgente</dd>
+        <dt>Assumir até</dt><dd id="dd-a">05/10, 11:40</dd>
+        <dt>Resolver até</dt><dd id="dd-r">05/10, 17:40</dd>
+        <dt>Prints</dt><dd>1 anexado</dd>
+      </dl>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn sec" type="button">Abrir outro chamado</button>
+        <button class="btn pri" type="button">Acompanhar este chamado</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4/5 · Painel do time + gamificação -->
+  <section class="layer" id="s4">
+    <div class="cam" id="cam4">
+      <header class="top"><div class="top-in">
+        <div class="brand"><span class="mark">RFG</span><div><b>Central de chamados</b><small>R. Feitosa Group</small></div></div>
+        <div class="conta">
+          <div class="tabs" role="tablist"><button class="tab" aria-selected="false">Abrir chamado</button><button class="tab" aria-selected="true">Painel do time<span class="n" id="cont">2</span></button><button class="tab" aria-selected="false">Minha jornada</button><button class="tab" aria-selected="false">Ranking</button></div>
+          <button type="button" class="selo" id="selo"><span class="selo-n" id="selo-n">Nv 3</span><span class="selo-bar"><i id="selo-bar"></i></span><span class="selo-xp mono" id="selo-xp">2.440</span><span class="flutua" id="flutua">+55 XP</span></button>
+        </div>
+      </div></header>
+      <main><section>
+        <div class="ph"><div><div class="sub">segunda, 5 de outubro</div><h1>Olá, Lucas</h1></div></div>
+        <div class="kpis">
+          <div class="card kpi"><span><i class="dot" style="background:var(--accent)"></i>Em aberto</span><b id="k-ab">2</b></div>
+          <div class="card kpi"><span><i class="dot" style="background:var(--warn)"></i>Sem responsável</span><b id="k-sr">0</b></div>
+          <div class="card kpi"><span><i class="dot" style="background:var(--bad)"></i>Atrasados</span><b>0</b></div>
+          <div class="card kpi"><span><i class="dot" style="background:var(--ok)"></i>Meus</span><b id="k-me">1</b></div>
+        </div>
+        <div class="card fila">
+          <div class="fh"><h2>Fila de chamados</h2>
+            <div class="tabs"><button class="tab" aria-selected="true">Em aberto<span class="n" id="f-ab">2</span></button><button class="tab" aria-selected="false">Sem responsável<span class="n" id="f-sr">0</span></button><button class="tab" aria-selected="false">Meus<span class="n" id="f-me">1</span></button><button class="tab" aria-selected="false">Resolvidos<span class="n" id="f-rs">14</span></button></div>
+          </div>
+          <div class="row head"><span>Protocolo</span><span>Chamado</span><span>Sistema</span><span>Urgência</span><span>Prazo</span><span>Responsável</span></div>
+          <div class="rowwrap" id="novo-wrap">
+            <div class="row novo" id="novo">
+              <span class="mono muted id" style="font-size:13px">TI-0425</span>
+              <div style="min-width:0"><div class="t" id="novo-t">Abri o ATLAS JURIS e a tela de intimações está vazia desde hoje cedo.</div><div class="sub">Ana Souza · Advogada · Jurídico</div></div>
+              <span class="sys">ATLAS JURIS</span>
+              <span class="pill u2" style="justify-self:start"><i class="dot"></i>Urgente</span>
+              <span class="prazo" id="novo-pz">assumir em 1 h 58 min<small>aberto há 2 min</small></span>
+              <div class="who" id="novo-who"></div>
+            </div>
+          </div>
+          <div class="row">
+            <span class="mono muted id" style="font-size:13px">TI-0424</span>
+            <div style="min-width:0"><div class="t">Impressora do 2º andar não puxa o papel.</div><div class="sub">Bruno Lima · Analista · Administrativo e Financeiro</div></div>
+            <span class="sys">Impressora / scanner</span>
+            <span class="pill u1" style="justify-self:start"><i class="dot"></i>Meio urgente</span>
+            <span class="prazo">resolver em 19 h<small>aberto há 5 h</small></span>
+            <div class="who"><span class="av">CR</span><div><div style="font-size:13px;font-weight:500">Carla Reis</div><div class="sub">Em andamento</div></div></div>
+          </div>
+          <div class="row">
+            <span class="mono muted id" style="font-size:13px">TI-0423</span>
+            <div style="min-width:0"><div class="t">Relatório de fluxo de caixa não exporta para Excel.</div><div class="sub">Marina Dias · Analista · Controladoria</div></div>
+            <span class="sys">Atlas Cash</span>
+            <span class="pill u0" style="justify-self:start"><i class="dot"></i>Não urgente</span>
+            <span class="prazo">resolver em 4 dias<small>aberto há 1 dia</small></span>
+            <div class="who"><span class="av">LM</span><div><div style="font-size:13px;font-weight:500">Lucas Mota</div><div class="sub">Em andamento</div></div><button class="mini" type="button">Resolver</button></div>
+          </div>
+        </div>
+      </section></main>
+    </div>
+    <div class="toasts" id="toasts">
+      <div class="tw" id="tw1"><div class="toast"><span class="ticon t-xp"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3z"/></svg></span>
+        <div class="tcorpo"><small>XP</small><b>Chamado resolvido no prazo</b><span>Urgente · confirma em 72 h sem reabertura</span><span class="txp">+55 XP</span></div><button type="button" class="tfechar">×</button></div></div>
+      <div class="tw" id="tw2"><div class="toast especial rar-incomum"><span class="medalha rar-incomum" id="med" style="width:48px;height:48px"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></span>
+        <div class="tcorpo"><small>Conquista desbloqueada</small><b>Guardião do SLA · Bronze</b><span>10 chamados resolvidos no prazo</span><span class="txp">+25 XP</span></div><button type="button" class="tfechar">×</button></div></div>
+      <div class="tw" id="tw3"><div class="toast especial rar-rara"><span class="ticon t-nivel"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-8 4 4 4-10 4 14"/></svg></span>
+        <div class="tcorpo"><small>Level up</small><b>Nível 4 · Especialista</b><span>Próximo: Expert, com 5.000 XP</span></div><button type="button" class="tfechar">×</button></div></div>
+    </div>
+  </section>
+
+  <!-- 6 · Fecho -->
+  <section class="layer" id="s6">
+    <span class="mark" id="o-mark">RFG</span>
+    <h2 id="o-title">Central de Chamados RFG</h2>
+    <div class="tag" id="o-tag"><span>Abriu.</span><span>Assumiu.</span><span>Resolveu.</span><span>No prazo.</span></div>
+    <small id="o-sub">R. Feitosa Group · sem login para abrir · prazos por urgência · XP por qualidade</small>
+  </section>
+
+  <div class="cap" id="cap"></div>
+  <div id="ripple"></div>
+  <svg id="cursor" viewBox="0 0 24 24"><path d="M5 3l14 7.5-6.2 1.6L10 18.5z" fill="#0e1116" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+</div>
+
+<script>
+const DUR = 22.0;
+const SIS_DEV = ['ATLAS JURIS','CRM','ATLAS RH','Atlas Consult','ATLAS Empresas','Atlas Trib','Rfast Mail','Agente WhatsApp','App Connect Valley','Site Feitosa Imóveis','Site do escritório','Connect Academy','Atlas Cash','Atlas Hub','Atlas Imóveis','Legal Ops','Atlas Ponto','R. Feitosa Ops','Outro / não sei'];
+const SIS_SUP = ['Computador / notebook','Impressora / scanner','E-mail, senha e acessos','Outro / não sei (suporte)'];
+const URG = ['Não urgente','Meio urgente','Urgente','Muito urgente'], COR = ['ok','info','warn','bad'];
+const RESOLVER_DEV = ['5 dias','2 dias','8 h','2 h'], ASSUMIR_DEV = ['24 h','8 h','2 h','30 min'];
+const EXPL = ['Dúvida, ajuste ou melhoria; dá para trabalhar normalmente.','Atrapalha parte do trabalho, mas há um jeito provisório de seguir.','Impede tarefa importante ou com prazo hoje, sem alternativa.','A pessoa ou o setor está parado, ou há risco de perder prazo de cliente, processo ou pagamento.'];
+const DESC = 'Abri o ATLAS JURIS e a tela de intimações está vazia desde hoje cedo.';
+const CHECK = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const $ = (id) => document.getElementById(id);
+
+// montagem estática (igual ao JSX real)
+$('sis-dev').innerHTML = SIS_DEV.map((s, i) => `<button type="button" class="tile" id="tile-d${i}" aria-pressed="false"><span>${s}</span><span class="chk">${CHECK}</span></button>`).join('');
+$('sis-sup').innerHTML = SIS_SUP.map((s) => `<button type="button" class="tile" aria-pressed="false"><span>${s}</span><span class="chk">${CHECK}</span></button>`).join('');
+$('seg').innerHTML = URG.map((u, i) => `<button type="button" id="u${i}" aria-pressed="false"><span><span class="dot" style="background:var(--${COR[i]});display:inline-block;margin-right:6px"></span>${u}</span><small id="us${i}"></small></button>`).join('');
+const STEPS = ['Setor','Nome','Cargo','Sistema','Descrição','Urgência'];
+$('steps').innerHTML = STEPS.map((s, i) => `<div class="step" id="st${i}"><span class="chk">${CHECK}</span><div><small>${s}</small><span id="sv${i}"></span></div></div>`).join('');
+
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const P = (t, a, b) => cl((t - a) / (b - a));
+const eo = (x) => 1 - Math.pow(1 - x, 3);
+const eio = (x) => (x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const eback = (x) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+const bez = (x) => { // cubic-bezier(.22,1,.36,1) aproximado
+  let lo = 0, hi = 1, s = .5;
+  for (let k = 0; k < 24; k++) { s = (lo + hi) / 2; const bx = 3*(1-s)*(1-s)*s*.22 + 3*(1-s)*s*s*.36 + s*s*s; if (bx < x) lo = s; else hi = s; }
+  return 3*(1-s)*(1-s)*s*1 + 3*(1-s)*s*s*1 + s*s*s;
+};
+const setT = (el, txt) => { if (el.textContent !== txt) el.textContent = txt; };
+const setH = (el, h) => { if (el._h !== h) { el.innerHTML = h; el._h = h; } };
+const fade = (t, a, b, c, d) => Math.min(P(t, a, b), 1 - P(t, c, d)); // entra a→b, sai c→d
+
+// cena: [início, fim]
+const S1 = [0, 3.27], S2 = [3.27, 8.19], S3 = [8.19, 10.93], S4 = [10.93, 18.56], S6 = [18.56, DUR];
+
+// medidas (app px, escala 1)
+let M = null;
+function medir() {
+  M = { tw: [0, 0, 0], novoH: 0, onde: {}, desc: {}, urg: {}, side: { y: 0 }, tile: {}, u2: {}, env: {}, h2: 0, bA: {}, bR: {}, who: {} };
+  render(7.3);
+  $('cam2').style.transform = 'none'; $('cam4').style.transform = 'none'; $('side').style.transform = 'none';
+  const cam2 = $('cam2'), r0 = cam2.getBoundingClientRect();
+  const rel = (el) => { const r = el.getBoundingClientRect(); return { x: r.left - r0.left, y: r.top - r0.top, w: r.width, h: r.height }; };
+  const cam4 = $('cam4'), q0 = cam4.getBoundingClientRect();
+  const rel4 = (el) => { const r = el.getBoundingClientRect(); return { x: r.left - q0.left, y: r.top - q0.top, w: r.width, h: r.height }; };
+  Object.assign(M, { onde: rel($('g-onde')), tile: rel($('tile-d0')), desc: rel($('desc')), urg: rel($('g-urg')), u2: rel($('u2')), env: rel($('enviar')),
+        side: rel($('side')), h2: cam2.offsetHeight, novoH: $('novo').offsetHeight,
+        tw: [1, 2, 3].map((i) => $('tw' + i).firstElementChild.offsetHeight + 10) });
+  // posição do botão Assumir/Resolver na linha nova (coluna "Responsável")
+  const nw = $('novo-who');
+  nw.innerHTML = '<button class="mini go" type="button" id="b-assumir">Assumir</button>';
+  M.bA = rel4($('b-assumir'));
+  nw.innerHTML = '<span class="av">LM</span><div><div style="font-size:13px;font-weight:500">Lucas Mota</div><div class="sub">Em andamento</div></div><button class="mini" type="button" id="b-resolver">Resolver</button><button class="mini" type="button">Ajuda</button>';
+  M.bR = rel4($('b-resolver'));
+  nw.innerHTML = '';
+}
+
+const S2X = 1.3, OX2 = (1920 - 1200 * S2X) / 2;
+function camY2(t) {
+  const yT = M.onde.y - 120, yD = M.desc.y - 330, yU = Math.min(M.urg.y - 330, M.h2 - 1080 / S2X);
+  if (t < 3.75) return 0;
+  if (t < 4.2) return yT * eio(P(t, 3.75, 4.2));
+  if (t < 4.45) return yT;
+  if (t < 4.85) return yT + (yD - yT) * eio(P(t, 4.45, 4.85));
+  if (t < 6.1) return yD;
+  if (t < 6.5) return yD + (yU - yD) * eio(P(t, 6.1, 6.5));
+  return yU;
+}
+
+// cursor: pontos em coordenadas do app (cena 2/4) → palco
+function rota(t, pts) {
+  if (t <= pts[0].t) return pts[0];
+  for (let i = 1; i < pts.length; i++) {
+    if (t <= pts[i].t) { const a = pts[i - 1], b = pts[i], k = eio(P(t, a.t, b.t)); return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k }; }
+  }
+  return pts[pts.length - 1];
+}
+const CLIQUES = [4.35, 4.92, 6.68, 7.45, 12.7, 15.4];
+
+function render(t) {
+  // ---------- 1 · gancho ----------
+  const s1 = $('s1');
+  const o1 = 1 - P(t, 3.0, 3.27);
+  s1.style.opacity = o1;
+  { const k = eback(P(t, 0.1, 0.5)); $('h-pill').style.transform = `translateY(${(1 - k) * 24}px) scale(${0.85 + 0.15 * k})`; $('h-pill').style.opacity = P(t, 0.1, 0.35); }
+  [...$('h-title').children].forEach((w, i) => {
+    const a = 0.3 + i * 0.11, k = bez(P(t, a, a + 0.5));
+    const out = eio(P(t, 2.95, 3.27));
+    w.style.opacity = P(t, a, a + 0.25) * (1 - out);
+    w.style.transform = `translateY(${(1 - k) * 60 - out * 40}px)`;
+  });
+  $('h-title').style.transform = `scale(${1 + 0.035 * P(t, 0, 3.27)})`;
+  s1.querySelector('.glow').style.transform = `scale(${0.9 + 0.2 * eo(P(t, 0, 3))})`;
+  s1.querySelector('.brand').style.opacity = P(t, 0.6, 1.0);
+
+  // ---------- 2 · formulário ----------
+  const s2 = $('s2');
+  const o2 = fade(t, 3.12, 3.42, 7.95, 8.19);
+  s2.style.opacity = o2;
+  const cy = camY2(t);
+  const zin = 1 - eo(P(t, 3.12, 3.6));
+  const sc = S2X * (1 + 0.04 * zin);
+  $('cam2').style.transform = `translate(${OX2 - 600 * S2X * 0.04 * zin}px, ${-cy * sc + 30 * zin}px) scale(${sc})`;
+  // sidebar "sticky"
+  $('side').style.transform = `translateY(${Math.max(0, cy + 24 - M.side.y)}px)`;
+  const sistema = t >= 4.35, nChars = Math.round(DESC.length * P(t, 4.98, 6.12)), urg = t >= 6.68 ? 2 : 1;
+  $('tile-d0').setAttribute('aria-pressed', String(sistema));
+  setT($('desc'), DESC.slice(0, nChars) + (t >= 4.92 && t < 6.4 && Math.floor(t * 2.4) % 2 === 0 ? '|' : ''));
+  for (let i = 0; i < 4; i++) { $('u' + i).setAttribute('aria-pressed', String(i === urg)); setT($('us' + i), sistema ? `resolver em até ${RESOLVER_DEV[i]}` : ''); }
+  $('explica').className = `explica u${urg}`;
+  setH($('explica'), `<b>${URG[urg]}:</b> ${EXPL[urg]} ` + (sistema ? `Para desenvolvimento, o time assume em até <b>${ASSUMIR_DEV[urg]}</b> e resolve em até <b>${RESOLVER_DEV[urg]}</b>.` : 'Escolha onde está o problema para ver os prazos.'));
+  const vals = ['Jurídico', 'Ana Souza', 'Advogada', sistema ? 'ATLAS JURIS' : '', nChars > 0 ? 'Preenchida' : '', URG[urg]];
+  vals.forEach((v, i) => { $('st' + i).className = 'step' + (v ? ' ok' : ''); setT($('sv' + i), v || 'Pendente'); });
+  const feitos = vals.filter(Boolean).length;
+  setT($('feitos'), `${feitos}/6`); $('barra').style.width = `${feitos / 6 * 100}%`;
+  const falta = [!sistema && 'o sistema', !nChars && 'a descrição'].filter(Boolean);
+  const enviando = t >= 7.45;
+  setT($('falta'), enviando ? 'Enviando…' : falta.length ? `Falta ${falta.join(', ')}.` : 'Tudo pronto.');
+  $('enviar').disabled = falta.length > 0;
+  $('enviar').style.transform = `scale(${1 - 0.05 * Math.max(0, 1 - Math.abs(t - 7.5) / 0.1)})`;
+
+  // ---------- 3 · protocolo ----------
+  const s3 = $('s3');
+  s3.style.opacity = fade(t, 8.19, 8.4, 10.7, 10.93);
+  { const k = bez(P(t, 8.19, 8.75)); $('done').style.transform = `translateY(${(1 - k) * 80}px) scale(${1.48 + 0.04 * (1 - k)})`; }
+  { const k = eback(P(t, 8.6, 9.0)); $('proto').style.display = 'inline-block'; $('proto').style.transform = `scale(${0.6 + 0.4 * k})`; $('proto').style.opacity = P(t, 8.6, 8.75); $('proto').style.transformOrigin = '0 50%'; }
+  $('dd-a').className = t >= 9.2 ? 'hl' : ''; $('dd-r').className = t >= 9.45 ? 'hl' : '';
+
+  // ---------- 4/5 · painel ----------
+  const s4 = $('s4');
+  s4.style.opacity = fade(t, 10.93, 11.15, 18.35, 18.56);
+  const k4 = 1 - eo(P(t, 10.93, 11.5));
+  const sc4 = 1.3 * (1 + 0.03 * k4);
+  $('cam4').style.transform = `translate(${(1920 - 1200 * sc4) / 2}px, ${-6 + 24 * k4}px) scale(${sc4})`;
+  const chegou = P(t, 11.5, 11.95), assumido = t >= 12.7, resolvido = t >= 15.4;
+  $('novo-wrap').style.height = `${M.novoH * eo(chegou)}px`;
+  $('novo').style.setProperty('--hl', `${Math.round(100 * (1 - P(t, 12.0, 14.0)) * (chegou > 0 ? 1 : 0))}%`);
+  const novo = chegou > 0.5;
+  setT($('k-ab'), String(novo ? (resolvido ? 2 : 3) : 2)); setT($('f-ab'), $('k-ab').textContent); setT($('cont'), $('k-ab').textContent);
+  setT($('k-sr'), String(novo && !assumido ? 1 : 0)); setT($('f-sr'), $('k-sr').textContent);
+  setT($('k-me'), String(assumido && !resolvido ? 2 : 1)); setT($('f-me'), $('k-me').textContent);
+  setT($('f-rs'), resolvido ? '15' : '14');
+  $('novo-t').className = 't' + (resolvido ? ' res' : '');
+  $('novo-pz').className = 'prazo ' + (resolvido ? 'cumprido' : 'no_prazo');
+  setH($('novo-pz'), resolvido ? 'resolvido no prazo<small>resolvido em 3 h 12 min</small>' : assumido ? 'resolver em 7 h 59 min<small>aberto há 3 min</small>' : 'assumir em 1 h 58 min<small>aberto há 2 min</small>');
+  setH($('novo-who'), !assumido ? '<button class="mini go" type="button" id="b-assumir">Assumir</button>'
+    : `<span class="av">LM</span><div><div style="font-size:13px;font-weight:500">Lucas Mota</div><div class="sub"${resolvido ? ' style="color:var(--ok)"' : ''}>${resolvido ? 'Resolvido' : 'Em andamento'}</div></div>`
+      + (resolvido ? '<button class="mini" type="button">Reabrir</button>' : '<button class="mini" type="button" id="b-resolver">Resolver</button><button class="mini" type="button">Ajuda</button>'));
+  // selo de XP
+  const xp = t < 15.75 ? 2440 : t < 16.45 ? 2495 : 2520;
+  const nv = xp >= 2500 ? 4 : 3, prog = nv === 3 ? (xp - 1200) / 1300 : (xp - 2500) / 2500;
+  setT($('selo-n'), `Nv ${nv}`); setT($('selo-xp'), xp.toLocaleString('pt-BR'));
+  $('selo-bar').style.width = `${prog * 100}%`;
+  { const pu = Math.max(0, 1 - Math.abs(t - 15.8) / 0.25, 1 - Math.abs(t - 16.5) / 0.25); $('selo').style.transform = `scale(${1 + 0.12 * pu})`;
+    $('selo').style.boxShadow = pu > 0 ? `0 0 0 ${6 * pu}px color-mix(in srgb,var(--accent) 25%,transparent)` : 'none'; }
+  { const f1 = P(t, 15.75, 16.6), f2 = P(t, 16.45, 17.3), f = f1 > 0 && f1 < 1 ? f1 : f2; const fl = $('flutua');
+    setT(fl, t < 16.45 ? '+55 XP' : '+25 XP'); fl.style.opacity = f > 0 && f < 1 ? Math.min(1, f * 5, (1 - f) * 3) : 0; fl.style.transform = `translateY(${-24 * eo(f)}px)`; }
+  // toasts
+  [[15.8, 'tw1'], [16.5, 'tw2'], [17.15, 'tw3']].forEach(([a, id], i) => {
+    const k = bez(P(t, a, a + 0.38)), el = $(id);
+    el.style.height = `${M.tw[i] * k}px`; el.style.overflow = k >= 1 ? 'visible' : 'hidden';
+    el.firstElementChild.style.opacity = P(t, a, a + 0.25);
+    el.firstElementChild.style.transform = `translateY(${(1 - k) * 16}px) scale(${0.97 + 0.03 * k})`;
+  });
+  { const k = P(t, 16.6, 17.1); const sp = 1 - Math.exp(-6 * k) * Math.cos(10 * k); $('med').style.transform = `rotate(${-12 * (1 - sp)}deg) scale(${0.6 + 0.4 * sp})`; }
+
+  // ---------- 6 · fecho ----------
+  const s6 = $('s6');
+  s6.style.opacity = P(t, 18.5, 18.72);
+  { const k = eback(P(t, 18.6, 19.0)); $('o-mark').style.transform = `scale(${0.5 + 0.5 * k}) rotate(${(1 - k) * -10}deg)`; $('o-mark').style.opacity = P(t, 18.6, 18.75); }
+  { const k = bez(P(t, 18.8, 19.3)); $('o-title').style.transform = `translateY(${(1 - k) * 40}px)`; $('o-title').style.opacity = P(t, 18.8, 19.05); }
+  [...$('o-tag').children].forEach((w, i) => { const a = 19.1 + i * 0.28, k = bez(P(t, a, a + 0.4)); w.style.opacity = P(t, a, a + 0.2); w.style.transform = `translateY(${(1 - k) * 26}px)`; });
+  $('o-sub').style.opacity = P(t, 20.1, 20.5);
+  s6.style.transform = `scale(${1 + 0.02 * P(t, 18.56, DUR)})`;
+
+  // ---------- legendas ----------
+  const CAPS = [[3.6, 6.9, 'Sem login. Diga <b>onde</b>, <b>o quê</b> e a <b>urgência</b>.'], [8.5, 10.75, 'Protocolo e <b>prazos</b> na hora.'],
+                [11.25, 14.6, 'O time vê na hora. <b>Cada etapa com prazo.</b>'], [14.85, 18.3, 'Qualidade e prazo valem <b>XP</b>. Reabrir desconta.']];
+  const cap = $('cap'); let co = 0;
+  for (const [a, b, h] of CAPS) if (t >= a - 0.01 && t <= b) { setH(cap, h); const k = bez(P(t, a, a + 0.35)); co = Math.min(P(t, a, a + 0.2), 1 - P(t, b - 0.2, b)); cap.style.transform = `translate(-50%, ${(1 - k) * 30}px)`; }
+  cap.style.opacity = co;
+
+  // ---------- cursor ----------
+  let cur = null, cvis = 0;
+  if (t >= 3.6 && t < 7.95) {
+    const tile = { x: M.tile.x + M.tile.w * 0.42, y: M.tile.y + M.tile.h * 0.55 }, d = { x: M.desc.x + 180, y: M.desc.y + 40 };
+    const u2 = { x: M.u2.x + M.u2.w * 0.5, y: M.u2.y + M.u2.h * 0.55 }, en = { x: M.env.x + M.env.w * 0.45, y: M.env.y + M.env.h * 0.55 };
+    const p = rota(t, [{ t: 3.6, x: 760, y: 560 }, { t: 3.85, x: 700, y: 600 }, { t: 4.3, ...tile }, { t: 4.5, ...tile }, { t: 4.88, ...d }, { t: 6.2, ...d }, { t: 6.62, ...u2 }, { t: 6.95, ...u2 }, { t: 7.4, ...en }]);
+    cur = { x: OX2 + p.x * sc - 600 * S2X * 0.04 * zin, y: (p.y - cy) * sc + 30 * zin }; cvis = fade(t, 3.6, 3.8, 7.75, 7.95);
+  } else if (t >= 11.9 && t < 18.3) {
+    const btn = { x: M.bA.x + M.bA.w * 0.45, y: M.bA.y + M.bA.h * 0.6 }, res = { x: M.bR.x + M.bR.w * 0.45, y: M.bR.y + M.bR.h * 0.6 };
+    const p = rota(t, [{ t: 11.9, x: 820, y: 760 }, { t: 12.6, ...btn }, { t: 14.9, ...btn }, { t: 15.32, ...res }, { t: 16.2, ...res }, { t: 16.9, x: 940, y: 730 }]);
+    cur = { x: (1920 - 1200 * sc4) / 2 + p.x * sc4, y: -6 + 24 * k4 + p.y * sc4 }; cvis = fade(t, 11.9, 12.1, 16.9, 17.2);
+  }
+  const C = $('cursor'), R = $('ripple');
+  if (cur) {
+    let press = 0; for (const c of CLIQUES) press = Math.max(press, 1 - Math.abs(t - c) / 0.09);
+    C.style.opacity = cvis; C.style.transform = `translate(${cur.x - 6}px, ${cur.y - 4}px) scale(${1 - 0.18 * cl(press)})`;
+    let rp = -1; for (const c of CLIQUES) if (t >= c && t < c + 0.45) rp = (t - c) / 0.45;
+    R.style.opacity = rp >= 0 ? (1 - rp) * 0.7 * cvis : 0; R.style.left = cur.x + 'px'; R.style.top = cur.y + 'px'; R.style.transform = `scale(${0.3 + 0.9 * eo(Math.max(rp, 0))})`;
+  } else { C.style.opacity = 0; R.style.opacity = 0; }
+}
+
+window.__pronto = document.fonts.ready.then(() => { medir(); render(0); return true; });
+window.render = render;
+window.DUR = DUR;
+</script>
+</body>
+</html>

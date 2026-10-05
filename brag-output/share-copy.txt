@@ -1,0 +1,1 @@
+Sistema travou? Na Central de Chamados RFG você abre o chamado sem login em menos de 1 minuto, já sai com protocolo e prazo, e o time vê na hora. Quem resolve bem e no prazo ganha XP; quem precisa reabrir perde.

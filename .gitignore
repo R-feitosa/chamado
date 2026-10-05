@@ -4,3 +4,8 @@ dist
 .env.local
 .env.*.local
 *.tsbuildinfo
+# Skill /brag instalada localmente (terceiros; áudio com licença não verificada) e intermediários do render
+.agents/
+.claude/skills/
+skills-lock.json
+brag-output/work/
