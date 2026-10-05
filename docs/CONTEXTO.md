@@ -136,4 +136,4 @@ Decisões com opções: apresentar caminhos (Conservador | Balanceado | Ousado) 
 ## 11. Gamificação (05/10/2026)
 Ver `docs/GAMIFICACAO.md`. Motor por eventos no banco (fila `gam_eventos` → ledger `gam_xp` idempotente), XP de resolução em
 validação por 72 h, Performance Score composto, antiabuso com revisão do gestor, missões, temporadas e Central de Gamificação.
-Aplicada em produção **com a chave desligada**; quem liga é o gestor (Roneely) na Central. Testes: `supabase/testes/gamificacao.sql`.
+**Ligada em 05/10/2026** (Temporada 1 · T4 2026; só conta o que aconteceu depois disso). Gestor: Roneely. Técnicos com login: Aldo, Breno Azevedo, João Pedro, Kaio e Ruan; **Brenno Magalhães ainda sem e-mail de login**. Testes: `supabase/testes/gamificacao.sql`.
