@@ -62,7 +62,7 @@ export function Acompanhar({ inicial = '', codigoInicial }: { inicial?: string; 
         {resultado && c && situacao && (
           <>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span className="mono" style={{ fontSize: 20, fontWeight: 600 }}>{resultado.protocolo}</span>
+              <span className="mono protocolo" style={{ fontSize: 20, fontWeight: 600 }}>{resultado.protocolo}</span>
               <span className={`pill ${situacao.classe}`}><i className="dot" />{situacao.texto}</span>
             </div>
             <dl>

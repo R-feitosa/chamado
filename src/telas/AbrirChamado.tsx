@@ -120,7 +120,7 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar,
   return (
     <section>
       <div className="hero">
-        <span className="pill" style={{ alignSelf: 'flex-start', background: 'var(--accent-soft)', color: 'var(--accent-ink)' }}>Leva menos de 1 minuto</span>
+        <span className="pill marca" style={{ alignSelf: 'flex-start' }}>Leva menos de 1 minuto</span>
         <h1>Algum sistema ou equipamento deu problema?</h1>
         <p>Conte o que aconteceu e o chamado chega na hora para o time de desenvolvimento e suporte.</p>
       </div>
@@ -133,7 +133,7 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar,
             O time foi avisado e já vê o chamado no painel.{publico && <> <b style={{ color: 'var(--ink)' }}>Guarde o protocolo</b> para acompanhar.</>}
           </p>
           <dl>
-            <dt>Protocolo</dt><dd className="mono" style={{ fontSize: 18 }}>{enviado.protocolo}</dd>
+            <dt>Protocolo</dt><dd className="mono protocolo" style={{ fontSize: 18 }}>{enviado.protocolo}</dd>
             <dt>Aberto por</dt><dd>{nomeExibido}{setor && <span className="muted"> · {setor}</span>}</dd>
             <dt>Onde</dt><dd>{nomeSistema(enviado.sistema_id)}</dd>
             <dt>Urgência</dt><dd>{URGENCIAS[enviado.urgencia]}</dd>

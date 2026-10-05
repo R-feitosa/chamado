@@ -45,7 +45,7 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
 
 ## Regras
 - Toda a interface em português do Brasil.
-- Visual: fonte Geist (Geist Mono para protocolos), fundo #f6f7f9, cor principal azul #2b4bee; suportar tema claro e escuro.
+- Visual (Manual de Marca RF Group, nov/25): logo do grupo no topo (`public/logo-rfg.png`, numa pastilha branca) e ampulheta como favicon; faixa degradê cinza → vinho → marinho sob o topo; cor principal marinho #212965, vinho #6d0001 de destaque (pílula do hero, protocolo, selo de nível), cinza #727272; fonte Geist (Geist Mono para protocolos), fundo #f6f7f9; suportar tema claro e escuro.
 - Urgência em 4 níveis, sempre com cor + texto: verde (Não urgente), azul (Meio urgente), âmbar (Urgente), vermelho (Muito urgente). No banco: 0 a 3.
 - Não alterar a lista de pessoas ou de sistemas sem confirmar comigo.
 - Antes de mudanças grandes, mostrar o plano e esperar aprovação.

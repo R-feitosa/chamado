@@ -48,7 +48,7 @@ function Cabecalho({ abas, tela, onTela, contador, children }: {
   return (
     <header className="top">
       <div className="top-in">
-        <div className="brand"><span className="mark">RFG</span><div><b>Central de chamados</b><small>R. Feitosa Group</small></div></div>
+        <div className="brand"><span className="logo-chip"><img src="/logo-rfg.png" alt="R. Feitosa Group" width="119" height="34" /></span><span className="brand-sep" aria-hidden="true" /><span className="brand-nome">Central de chamados</span></div>
         <div className="conta">
           {abas && onTela && (
             <div className="tabs" role="tablist" aria-label="Telas">

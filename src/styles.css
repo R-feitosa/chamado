@@ -2,20 +2,23 @@
 :root{
   --bg:#f6f7f9; --surface:#ffffff; --soft:#f1f2f5; --line:#e6e7ec;
   --ink:#0e1116; --ink2:#4a5160; --ink3:#6b7280;
-  --accent:#2b4bee; --accent-soft:#eef1fe; --accent-ink:#1a33b8; --on-accent:#ffffff;
+  --accent:#212965; --accent-soft:#eceef8; --accent-ink:#212965; --on-accent:#ffffff;
+  --brand-wine:#6d0001; --brand-wine-soft:#f7e9e9; --brand-gray:#727272;
   --ok:#0f6a43; --ok-soft:#e7f6ee; --info:#1d5fb8; --info-soft:#e6f0fc; --warn:#93430a; --warn-soft:#fdf1e3; --bad:#a61f15; --bad-soft:#fdecec;
   --font:"Geist",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"Geist Mono",ui-monospace,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0d0f14; --surface:#151821; --soft:#1d212c; --line:#262b37;
   --ink:#eef0f5; --ink2:#b3b9c6; --ink3:#8b93a3;
-  --accent:#6f88ff; --accent-soft:#1d2550; --accent-ink:#b9c6ff; --on-accent:#0d0f14;
+  --accent:#9aa3ef; --accent-soft:#1d2250; --accent-ink:#c5caf6; --on-accent:#0d0f14;
+  --brand-wine:#f08a8a; --brand-wine-soft:#3a1416; --brand-gray:#9a9a9a;
   --ok:#5fd39b; --ok-soft:#12301f; --info:#7db4ff; --info-soft:#132a47; --warn:#f0b071; --warn-soft:#33230f; --bad:#ff8a80; --bad-soft:#3a1714;
   color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0d0f14; --surface:#151821; --soft:#1d212c; --line:#262b37;
   --ink:#eef0f5; --ink2:#b3b9c6; --ink3:#8b93a3;
-  --accent:#6f88ff; --accent-soft:#1d2550; --accent-ink:#b9c6ff; --on-accent:#0d0f14;
+  --accent:#9aa3ef; --accent-soft:#1d2250; --accent-ink:#c5caf6; --on-accent:#0d0f14;
+  --brand-wine:#f08a8a; --brand-wine-soft:#3a1416; --brand-gray:#9a9a9a;
   --ok:#5fd39b; --ok-soft:#12301f; --info:#7db4ff; --info-soft:#132a47; --warn:#f0b071; --warn-soft:#33230f; --bad:#ff8a80; --bad-soft:#3a1714;
   color-scheme:dark}
 *{box-sizing:border-box}
@@ -26,7 +29,6 @@ button:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
 .top-in{max-width:1120px;margin:0 auto;padding:0 16px;min-height:64px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:10px}
-.mark{width:34px;height:34px;border-radius:10px;background:var(--ink);color:var(--bg);font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
 .brand b{display:block;font-size:15px;font-weight:600;line-height:20px}
 .brand small{display:block;font-size:12px;color:var(--ink3);line-height:16px}
 .tabs{display:flex;gap:4px;padding:4px;background:var(--soft);border-radius:12px}
@@ -336,3 +338,16 @@ textarea.field.json{font-family:var(--mono);font-size:13px;min-height:120px}
 @media (max-width:980px){.gcards{grid-template-columns:repeat(2,minmax(0,1fr))}.ggrid{grid-template-columns:minmax(0,1fr)}.rk{grid-template-columns:36px minmax(0,1fr) 72px 64px}.rk .opt{display:none}}
 @media (max-width:520px){.gnivel{grid-column:span 2}.seqs{grid-template-columns:minmax(0,1fr)}.estrelas button{width:44px;height:44px}}
 .who{flex-wrap:wrap;row-gap:6px}
+
+/* ===== Marca R. Feitosa Group (Manual de Marca, nov/25): logo, faixa e vinho de destaque ===== */
+.top::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:4px;background:linear-gradient(90deg,#7a7a7a 0,#cfcfcf 32.8%,#6d0001 32.8%,#e3000f 85.4%,#1b1f4f 85.4%,#2f43a6 100%)}
+.logo-chip{display:inline-flex;align-items:center;background:#fff;border-radius:12px;padding:5px 10px;box-shadow:0 0 0 1px var(--line)}
+.logo-chip img{display:block;height:34px;width:auto}
+.brand-sep{width:1px;height:28px;background:var(--line)}
+.brand-nome{font-size:15px;font-weight:600;line-height:20px}
+.pill.marca{background:var(--brand-wine-soft);color:var(--brand-wine)}
+.protocolo{color:var(--brand-wine)}
+.selo-n{background:var(--brand-wine);color:#fff}
+:root[data-theme="dark"] .selo-n{color:#1a0505}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .selo-n{color:#1a0505}}
+@media (max-width:520px){.brand-sep,.brand-nome{display:none}.logo-chip img{height:26px}}

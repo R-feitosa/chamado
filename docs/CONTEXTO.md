@@ -137,3 +137,6 @@ Decisões com opções: apresentar caminhos (Conservador | Balanceado | Ousado) 
 Ver `docs/GAMIFICACAO.md`. Motor por eventos no banco (fila `gam_eventos` → ledger `gam_xp` idempotente), XP de resolução em
 validação por 72 h, Performance Score composto, antiabuso com revisão do gestor, missões, temporadas e Central de Gamificação.
 **Ligada em 05/10/2026** (Temporada 1 · T4 2026; só conta o que aconteceu depois disso). Gestor: Roneely. Técnicos com login: Aldo, Breno Azevedo, João Pedro, Kaio e Ruan; **Brenno Magalhães ainda sem e-mail de login**. Testes: `supabase/testes/gamificacao.sql`.
+
+## 12. Identidade visual (05/10/2026)
+- Aplicado o Manual de Marca RF Group (nov/25): logo do grupo (p. 3 do manual) no topo, ampulheta como favicon (`public/`), faixa degradê da marca sob o topo e paleta marinho #212965 (principal), vinho #6d0001 (destaque) e cinza #727272. Tokens em `src/styles.css` (`--accent*`, `--brand-*`). Urgências e raridades mantêm as cores próprias.
