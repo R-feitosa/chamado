@@ -68,13 +68,13 @@ Deno.serve(async (req) => {
 
   for (const envio of lote.envios) {
     const ttl = Math.max(60, Math.floor((new Date(envio.expira_em).getTime() - Date.now()) / 1000))
-    const urg = Number(envio.payload.urgencia ?? 1)
     const tentativas = await Promise.all(envio.inscricoes.map(async (insc) => {
       if (!isAllowedPushEndpoint(insc.endpoint)) return { insc, status: 0, erro: 'endpoint_recusado' }
       try {
         const res = await sendWebPush(insc, envio.payload, vapid!, vapid!.subject, {
           ttl,
-          urgency: urg >= 2 || envio.tipo === 'prazo_vencido' ? 'high' : 'normal',
+          // Sempre 'high': com 'normal' o FCM pode segurar e entregar em lote (visto: atraso no Chrome do Windows).
+          urgency: 'high',
           topic: typeof envio.payload.tag === 'string' ? envio.payload.tag : undefined,
         })
         const erro = res.ok ? undefined : (await res.text()).slice(0, 200)
