@@ -43,17 +43,52 @@ function chaveVapid(b64url: string): Uint8Array {
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 }
 
+/** Service worker pronto, sem travar para sempre se o registro falhar. */
+async function swPronto(): Promise<ServiceWorkerRegistration> {
+  const reg = await registrarSW();
+  const pronto = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<null>((r) => setTimeout(() => r(null), 10_000)),
+  ]);
+  if (!pronto) throw new Error('O serviço de notificações do site não iniciou. Recarregue a página com Ctrl+Shift+R e tente de novo.');
+  return reg ?? pronto;
+}
+
+/** Erro do navegador em português, com o detalhe técnico entre parênteses para diagnóstico. */
+export function erroDoNavegador(e: unknown): Error {
+  const n = (e as { name?: string } | null)?.name ?? '';
+  const m = (e as { message?: string } | null)?.message ?? String(e);
+  if (/^(O serviço|O navegador|Permissão|Você fechou|Não foi possível ativar)/.test(m)) return e as Error;
+  const brave = 'brave' in navigator;
+  if (n === 'NotAllowedError') return new Error('O navegador bloqueou as notificações deste site. Clique no cadeado ao lado do endereço → Notificações → Permitir.');
+  if (n === 'AbortError' || /push service/i.test(m)) {
+    return new Error(brave
+      ? 'O navegador recusou o push. No Brave, ative "Usar os serviços do Google para mensagens push" em brave://settings/privacy e reinicie o navegador.'
+      : `O navegador não conseguiu falar com o serviço de push (${n || 'erro'}: ${m}). Feche e abra o navegador e tente de novo; se continuar, use o Chrome ou o Edge.`);
+  }
+  return new Error(`Não foi possível ativar neste navegador (${n || 'erro'}: ${m}).`);
+}
+
 /** Pede permissão, inscreve este navegador e grava a inscrição no banco. */
 export async function ativarPush(vapid: string): Promise<void> {
   marcarRecusa(false);
   const perm = await Notification.requestPermission();
-  if (perm !== 'granted') throw new Error('Permissão de notificações negada. Libere nas configurações do navegador para este site.');
-  const reg = (await registrarSW()) ?? (await navigator.serviceWorker.ready);
-  await navigator.serviceWorker.ready;
-  let sub = await reg.pushManager.getSubscription();
-  sub ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chaveVapid(vapid) as BufferSource });
+  if (perm === 'denied') throw new Error('O navegador bloqueou as notificações deste site. Clique no cadeado ao lado do endereço → Notificações → Permitir.');
+  if (perm !== 'granted') throw new Error('Você fechou o pedido de permissão sem permitir. Clique em "Ativar" de novo e escolha "Permitir".');
+  let sub: PushSubscription;
+  try {
+    const reg = await swPronto();
+    sub = (await reg.pushManager.getSubscription())
+      ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chaveVapid(vapid) as BufferSource }));
+  } catch (e) { throw erroDoNavegador(e); }
   const j = sub.toJSON();
-  await rpc('push_inscrever', { p_endpoint: sub.endpoint, p_p256dh: j.keys?.p256dh, p_auth: j.keys?.auth, p_user_agent: navigator.userAgent });
+  try {
+    await rpc('push_inscrever', { p_endpoint: sub.endpoint, p_p256dh: j.keys?.p256dh, p_auth: j.keys?.auth, p_user_agent: navigator.userAgent });
+  } catch (e) {
+    const m = (e as { message?: string } | null)?.message ?? '';
+    if (/^Notificações são/.test(m)) throw e;
+    throw new Error(`Não foi possível ativar neste navegador (servidor: ${m || 'erro'}; serviço ${new URL(sub.endpoint).host}).`);
+  }
 }
 
 /** Quem desativou de propósito neste aparelho não é reinscrito sozinho. */
@@ -67,8 +102,7 @@ function marcarRecusa(v: boolean) { try { if (v) localStorage.setItem(RECUSA, '1
  */
 export async function garantirPush(vapid: string | null): Promise<boolean> {
   if (!vapid || !suportaPush() || Notification.permission !== 'granted' || recusou()) return false;
-  const reg = (await registrarSW()) ?? (await navigator.serviceWorker.ready);
-  await navigator.serviceWorker.ready;
+  const reg = await swPronto();
   let sub = await reg.pushManager.getSubscription();
   sub ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chaveVapid(vapid) as BufferSource });
   const j = sub.toJSON();
