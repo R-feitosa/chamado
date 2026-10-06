@@ -408,3 +408,8 @@ textarea.field.json{font-family:var(--mono);font-size:13px;min-height:120px}
 .gaveta .chat-lista{max-height:none;flex:1;min-height:240px}
 .gaveta .chat-bloco{border-top:none;padding-top:0;flex:1}
 .gaveta-x{position:absolute;top:14px;right:14px}
+.faixa-push{flex-wrap:wrap;background:var(--warn-soft,var(--accent-soft));color:var(--ink)}
+.faixa-push>svg{flex:none;width:18px;height:18px}
+.faixa-push>span{flex:1 1 260px}
+.faixa-push .faixa-aviso{display:block;margin-top:4px;color:var(--ink2)}
+

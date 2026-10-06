@@ -93,3 +93,32 @@ export function AvisosNaTela({ a, onVer }: { a: Alertas; onVer?: () => void }) {
     </div>
   );
 }
+
+/**
+ * Faixa fixa enquanto o push não estiver ativo neste aparelho: sem ele, o técnico só é avisado com a Central em primeiro plano.
+ * "Agora não" esconde só até fechar a aba.
+ */
+export function FaixaNotificacoes({ a }: { a: Alertas }) {
+  const [oculta, setOculta] = useState(() => { try { return sessionStorage.getItem('rfg-faixa-push') === '1'; } catch { return false; } });
+  if (oculta || a.pushAtivo || !a.suporta || precisaInstalarNoIOS()) return null;
+  const esconder = () => { setOculta(true); try { sessionStorage.setItem('rfg-faixa-push', '1'); } catch { /* sem armazenamento */ } };
+  if (a.permissao === 'denied') {
+    return (
+      <div className="banner faixa-push" role="alert">
+        <Sino />
+        <span><b>Notificações bloqueadas neste navegador.</b> Clique no cadeado ao lado do endereço → Notificações → <b>Permitir</b> e recarregue a página.</span>
+        <button type="button" className="mini" onClick={esconder}>Agora não</button>
+      </div>
+    );
+  }
+  return (
+    <div className="banner faixa-push" role="alert">
+      <Sino />
+      <span><b>Ative as notificações</b> para ser avisado de chamado novo em qualquer aba, com a Central minimizada ou fechada.
+        {a.aviso && <small className="faixa-aviso" role="status">{a.aviso}</small>}</span>
+      <button type="button" className="btn pri notif-btn" disabled={a.ocupado} onClick={() => void a.ativar()}>{a.ocupado ? 'Ativando…' : 'Ativar agora'}</button>
+      <button type="button" className="mini" onClick={esconder}>Agora não</button>
+    </div>
+  );
+}
+

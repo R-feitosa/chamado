@@ -27,6 +27,8 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
   - **Central de Gamificação** (só gestor): chave, regras de XP, multiplicadores, score e limites, níveis, conquistas, missões, temporadas, recompensas, revisão de suspeitas, auditoria.
   - **Gestor** (`pessoas.gestor`, hoje Roneely): entra com a conta ATLAS; vê Painel do time (só lê e desassume), Ranking, Analytics e a Central; não assume nem pontua.
 - **Notificações** (dev/suporte e gestor): sino no topo → "Ativar neste aparelho" (Web Push; no iPhone só com a Central instalada na tela de início).
+  Enquanto o push não estiver ativo no aparelho, uma faixa no topo pede "Ativar agora" (ou explica como desbloquear). Com a permissão já dada,
+  o navegador é inscrito/reinscrito sozinho ao entrar (exceto quem desativou de propósito). Sem push, a própria aba mostra o aviso do sistema sempre que a Central não estiver em foco.
   Aviso **imediato** de chamado novo e **repetição enquanto ninguém assume**: Muito urgente a cada 5 min e Urgente a cada 15 min (24 h);
   Meio urgente a cada 1 h e Não urgente a cada 4 h (só no expediente, `gam_config.expediente`). Prazo de assumir vencido → avisa o gestor (1×).
   Responsável: aviso com prazo de resolver perto (últimos 25%) e vencido. Com a Central aberta toca **som por urgência** (Web Audio, `src/lib/som.ts`);

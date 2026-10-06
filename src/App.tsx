@@ -17,7 +17,7 @@ import { listarTemporadas } from './lib/apiGam';
 import { CentralL as CentralGamificacao, JornadaL as Jornada, RankingL as Ranking, SeloXPL as SeloXP, ToastsL as Toasts } from './componentes/gam/Lazy';
 import { avaliacaoDaUrl, guardarCodigo, urlSemAvaliacao } from './lib/avaliacao';
 import { useAlertas } from './hooks/useAlertas';
-import { AvisosNaTela, Notificacoes } from './componentes/Notificacoes';
+import { AvisosNaTela, FaixaNotificacoes, Notificacoes } from './componentes/Notificacoes';
 
 type Tela = 'abrir' | 'acompanhar' | 'entrar' | 'painel' | 'analytics' | 'jornada' | 'ranking' | 'central' | 'perfil';
 type Aba = { tela: Tela; nome: string };
@@ -167,6 +167,7 @@ function Dev({ eu, userId, catalogo }: { eu: Pessoa; userId: string; catalogo: C
       </Cabecalho>
       <main>
         {conexao === 'caiu' && <div className="banner" role="status">A conexão com a base caiu. Recarregue a página.</div>}
+        <FaixaNotificacoes a={alertas} />
         <div hidden={tela !== 'abrir'}>
           {convite.fase === 'erro' && <div className="banner" role="alert">{convite.mensagem}</div>}
           {convite.fase === 'lendo' ? <div className="carregando">Conferindo o link…</div> : (
@@ -203,6 +204,7 @@ function Gestor({ eu, catalogo }: { eu: Pessoa; catalogo: Catalogo }) {
         <button className="sair" type="button" onClick={() => { history.replaceState(null, '', location.pathname); void supabase.auth.signOut(); }}>Sair</button>
       </Cabecalho>
       <main>
+        <FaixaNotificacoes a={alertas} />
         {tela === 'central' && <CentralGamificacao />}
         {tela === 'ranking' && <Ranking temporadas={temporadas} onPerfil={(id) => { setPerfilId(id); ir('perfil'); }} />}
         {tela === 'perfil' && perfilId && <Jornada pessoaId={perfilId} onVoltar={() => ir('ranking')} onPerfil={(id) => setPerfilId(id)} onRanking={() => ir('ranking')} />}

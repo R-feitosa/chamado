@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { avisosDevidos, EXPEDIENTE_PADRAO, marcarVistos, REGRAS_PADRAO, type Aviso } from '../lib/alertas';
-import { ativarPush, configPush, desativarPush, inscricaoAtual, registrarSW, suportaPush, testarPush, type ConfigPush } from '../lib/push';
+import { ativarPush, configPush, desativarPush, garantirPush, inscricaoAtual, registrarSW, suportaPush, testarPush, type ConfigPush } from '../lib/push';
 import { definirSom, prepararAudio, somLigado, tocarSom } from '../lib/som';
 import { mensagemErro } from '../lib/formato';
 import { URGENCIAS, type Catalogo, type Chamado } from '../lib/tipos';
@@ -11,8 +11,9 @@ const ICONE = ['🟢', '🔵', '🟠', '🔴'];
 /**
  * Avisos do time na própria aba (som + cartão) e controle do push deste aparelho.
  * Com a aba aberta: avisa chamado novo na hora e repete pela regra da urgência enquanto ninguém assume
- * (mesma regra do agendador do banco). A notificação do sistema vem do push (Edge Function); se o push
- * não estiver ativo mas a permissão estiver dada, a própria aba mostra a notificação quando estiver em segundo plano.
+ * (mesma regra do agendador do banco). A notificação do sistema vem do push (Edge Function); com a permissão já dada,
+ * o push é ativado/reinscrito sozinho ao entrar. Se ainda assim não houver push, a própria aba mostra a notificação do
+ * sistema sempre que a Central não estiver em foco (outra aba, outra janela ou minimizada).
  * `avisar = false` (gestor): só controla o push deste aparelho.
  */
 export function useAlertas({ chamados, catalogo, euId, avisar }: { chamados: Chamado[]; catalogo: Catalogo; euId: string; avisar: boolean }) {
@@ -26,9 +27,15 @@ export function useAlertas({ chamados, catalogo, euId, avisar }: { chamados: Cha
   const iniciou = useRef(false);
   const seq = useRef(0);
 
+  const [permissao, setPermissao] = useState<NotificationPermission | 'indisponivel'>(() => (suportaPush() ? Notification.permission : 'indisponivel'));
   const carregar = useCallback(async () => {
-    try { setConfig(await configPush()); } catch { /* sem config: usa o padrão */ }
-    if (suportaPush() && Notification.permission === 'granted') setPushAtivo(!!(await inscricaoAtual()));
+    let c: ConfigPush | null = null;
+    try { c = await configPush(); setConfig(c); } catch { /* sem config: usa o padrão */ }
+    if (!suportaPush()) return;
+    setPermissao(Notification.permission);
+    let ativo = false;
+    try { ativo = await garantirPush(c?.vapid_public_key ?? null); } catch { /* segue com o aviso da aba */ }
+    setPushAtivo(ativo || (Notification.permission === 'granted' && !!(await inscricaoAtual())));
   }, []);
 
   useEffect(() => {
@@ -52,8 +59,8 @@ export function useAlertas({ chamados, catalogo, euId, avisar }: { chamados: Cha
     const id = ++seq.current;
     setAlertas((l) => [{ id, titulo, corpo, urgencia: c.urgencia }, ...l].slice(0, 4));
     window.setTimeout(() => setAlertas((l) => l.filter((x) => x.id !== id)), c.urgencia >= 2 ? 20_000 : 9_000);
-    // Sem push neste aparelho: a própria aba avisa o sistema quando estiver em segundo plano.
-    if (!pushAtivo && document.hidden && suportaPush() && Notification.permission === 'granted') {
+    // Sem push neste aparelho: a própria aba avisa o sistema sempre que a Central não estiver em foco.
+    if (!pushAtivo && !document.hasFocus() && suportaPush() && Notification.permission === 'granted') {
       void navigator.serviceWorker.getRegistration().then((reg) => reg?.showNotification(titulo, {
         body: corpo, tag: `chamado-${c.protocolo}`, icon: '/icon-192.png', badge: '/badge-72.png',
         requireInteraction: c.urgencia >= 2, data: { url: '/' },
@@ -89,7 +96,7 @@ export function useAlertas({ chamados, catalogo, euId, avisar }: { chamados: Cha
   }
 
   return {
-    config, pushAtivo, som, alertas, ocupado, aviso, suporta: suportaPush(),
+    config, pushAtivo, som, alertas, ocupado, aviso, suporta: suportaPush(), permissao,
     fechar: (id: number) => setAlertas((l) => l.filter((x) => x.id !== id)),
     setSom: (v: boolean) => { definirSom(v); setSomEstado(v); if (v) { prepararAudio(); tocarSom(1); } },
     ouvir: (u: Chamado['urgencia']) => { prepararAudio(); tocarSom(u); },

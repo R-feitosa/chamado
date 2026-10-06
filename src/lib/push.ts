@@ -45,6 +45,7 @@ function chaveVapid(b64url: string): Uint8Array {
 
 /** Pede permissão, inscreve este navegador e grava a inscrição no banco. */
 export async function ativarPush(vapid: string): Promise<void> {
+  marcarRecusa(false);
   const perm = await Notification.requestPermission();
   if (perm !== 'granted') throw new Error('Permissão de notificações negada. Libere nas configurações do navegador para este site.');
   const reg = (await registrarSW()) ?? (await navigator.serviceWorker.ready);
@@ -55,7 +56,28 @@ export async function ativarPush(vapid: string): Promise<void> {
   await rpc('push_inscrever', { p_endpoint: sub.endpoint, p_p256dh: j.keys?.p256dh, p_auth: j.keys?.auth, p_user_agent: navigator.userAgent });
 }
 
+/** Quem desativou de propósito neste aparelho não é reinscrito sozinho. */
+const RECUSA = 'rfg-push-desativado';
+function recusou(): boolean { try { return localStorage.getItem(RECUSA) === '1'; } catch { return false; } }
+function marcarRecusa(v: boolean) { try { if (v) localStorage.setItem(RECUSA, '1'); else localStorage.removeItem(RECUSA); } catch { /* sem armazenamento */ } }
+
+/**
+ * Sem pedir nada: com a permissão já dada, garante a inscrição deste navegador no banco (reinscreve se sumiu
+ * ou foi desativada pelo servidor). Devolve se o push ficou ativo.
+ */
+export async function garantirPush(vapid: string | null): Promise<boolean> {
+  if (!vapid || !suportaPush() || Notification.permission !== 'granted' || recusou()) return false;
+  const reg = (await registrarSW()) ?? (await navigator.serviceWorker.ready);
+  await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  sub ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chaveVapid(vapid) as BufferSource });
+  const j = sub.toJSON();
+  await rpc('push_inscrever', { p_endpoint: sub.endpoint, p_p256dh: j.keys?.p256dh, p_auth: j.keys?.auth, p_user_agent: navigator.userAgent });
+  return true;
+}
+
 export async function desativarPush(): Promise<void> {
+  marcarRecusa(true);
   const sub = await inscricaoAtual();
   if (!sub) return;
   await rpc('push_cancelar', { p_endpoint: sub.endpoint }).catch(() => undefined);
