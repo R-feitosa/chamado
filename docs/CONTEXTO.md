@@ -150,3 +150,10 @@ validação por 72 h, Performance Score composto, antiabuso com revisão do gest
 - Descarte: `chat_descartar()` roda dentro de `push_agendar()` (cron `chamados-push`, 1 min) e zera o texto 24 h após resolver.
 - Front: `src/lib/chat.ts` (+ testes), `src/componentes/Chat.tsx` (`ChatSolicitante` consulta a cada 5 s/30 s em segundo plano; `ChatTime` em tempo real), Acompanhar e gaveta 💬 no Painel.
 - Sem o código (outro navegador, link perdido) quem abriu só consulta o protocolo, sem chat.
+
+## 15. Desassumir (06/10/2026)
+- No ar: migration `20261006160000_desassumir.sql` (`desassumir_chamado(id, motivo?)`, `gam_ao_desassumir`, valor `desassumido` em `acao_t`). Testes: `supabase/testes/desassumir.sql`.
+- Quem: o responsável ou o gestor (o gestor ganhou a aba "Painel do time", só com Desassumir e leitura das conversas).
+- Efeitos: status "aberto", sem responsável e sem `assumido_em` (prazos da abertura mantidos; reassumir conta de novo no "assumidos no prazo"); pedidos de ajuda pendentes viram recusados; avisos de prazo do antigo responsável cancelados; XP de "resposta rápida" pendente/retido estornado (e não paga de novo se a mesma pessoa reassumir).
+- Armadilha corrigida: `gam_publicar_evento` tratava qualquer ação fora da lista como `ticket.reopened`; agora ignora `desassumido`.
+

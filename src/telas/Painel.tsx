@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { agir, justificarAtraso, listarColaboracoes, MOTIVOS_REABERTURA, pedirAjuda, reabrir, responderAjuda, type Acao, type Colaboracao, type MotivoReabertura } from '../lib/api';
+import { agir, desassumir, justificarAtraso, listarColaboracoes, MOTIVOS_REABERTURA, pedirAjuda, reabrir, responderAjuda, type Acao, type Colaboracao, type MotivoReabertura } from '../lib/api';
 import { FILTROS, indicadores, noFiltro, ordenar, quemAbriu, type Filtro } from '../lib/fila';
 import { duracao, inicioDoPeriodo, resolvidosNoPeriodo, tempoDaFila, temposMedios } from '../lib/analytics';
 import { formatoPct, situacaoPrazo, taxaAssumidoNoPrazo, taxaNoPrazo, textoPrazo } from '../lib/sla';
@@ -12,11 +12,11 @@ import { ChatTime } from '../componentes/Chat';
 import { resumoConversas, type ResumoChat } from '../lib/chat';
 import { supabase } from '../lib/supabase';
 
-interface Props { eu: Pessoa; catalogo: Catalogo; chamados: Chamado[]; onAcao?: () => void }
+interface Props { eu: Pessoa; catalogo: Catalogo; chamados: Chamado[]; onAcao?: () => void; gestor?: boolean }
 
-type Dialogo = { tipo: 'reabrir' | 'ajuda' | 'justificar'; c: Chamado } | null;
+type Dialogo = { tipo: 'reabrir' | 'ajuda' | 'justificar' | 'desassumir'; c: Chamado } | null;
 
-/** Diálogos do Painel: reabrir com motivo, pedir ajuda a um colega e justificar atraso. */
+/** Diálogos do Painel: reabrir com motivo, pedir ajuda a um colega, justificar atraso e desassumir. */
 function Dialogos({ d, eu, devs, onFechar, onFeito }: { d: NonNullable<Dialogo>; eu: Pessoa; devs: Pessoa[]; onFechar: () => void; onFeito: () => void }) {
   const [motivo, setMotivo] = useState<MotivoReabertura | ''>('');
   const [texto, setTexto] = useState('');
@@ -24,7 +24,8 @@ function Dialogos({ d, eu, devs, onFechar, onFeito }: { d: NonNullable<Dialogo>;
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
   useEffect(() => { const esc = (e: KeyboardEvent) => e.key === 'Escape' && onFechar(); window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc); }, [onFechar]);
-  const pronto = d.tipo === 'reabrir' ? !!motivo && (motivo !== 'outro' || texto.trim().length >= 5) : d.tipo === 'ajuda' ? !!colega : texto.trim().length >= 5;
+  const pronto = d.tipo === 'reabrir' ? !!motivo && (motivo !== 'outro' || texto.trim().length >= 5) : d.tipo === 'ajuda' ? !!colega
+    : d.tipo === 'desassumir' ? true : texto.trim().length >= 5;
   async function enviar(e: FormEvent) {
     e.preventDefault();
     if (!pronto || enviando) return;
@@ -32,11 +33,13 @@ function Dialogos({ d, eu, devs, onFechar, onFeito }: { d: NonNullable<Dialogo>;
     try {
       if (d.tipo === 'reabrir') await reabrir(d.c.id, motivo as MotivoReabertura, texto);
       else if (d.tipo === 'ajuda') await pedirAjuda(d.c.id, colega);
+      else if (d.tipo === 'desassumir') await desassumir(d.c.id, texto);
       else await justificarAtraso(d.c.id, texto);
       onFeito();
     } catch (err) { setErro(mensagemErro(err)); } finally { setEnviando(false); }
   }
-  const titulos = { reabrir: 'Reabrir chamado', ajuda: 'Pedir ajuda a um colega', justificar: 'Justificar atraso' };
+  const titulos = { reabrir: 'Reabrir chamado', ajuda: 'Pedir ajuda a um colega', justificar: 'Justificar atraso', desassumir: 'Desassumir chamado' };
+  const botoes = { reabrir: 'Reabrir', ajuda: 'Pedir ajuda', justificar: 'Salvar justificativa', desassumir: 'Desassumir' };
   return (
     <div className="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-t" onClick={(e) => e.target === e.currentTarget && onFechar()}>
       <form className="card" onSubmit={enviar}>
@@ -58,17 +61,22 @@ function Dialogos({ d, eu, devs, onFechar, onFeito }: { d: NonNullable<Dialogo>;
             <small className="muted">O colega confirma no próprio painel. A ajuda conta quando o chamado for resolvido e validado.</small>
           </label>
         )}
+        {d.tipo === 'desassumir' && (
+          <p className="muted" style={{ margin: '0 0 12px' }}>O chamado volta para a fila sem responsável, com os mesmos prazos. Pedidos de ajuda sem resposta são cancelados
+            e o XP de resposta rápida ainda em validação é estornado.</p>
+        )}
         {(d.tipo !== 'ajuda') && (
-          <label className="grp"><span className="lbl">{d.tipo === 'justificar' ? 'O que causou o atraso?' : `Detalhes${motivo === 'outro' ? ' (obrigatório)' : ' (opcional)'}`}</span>
+          <label className="grp"><span className="lbl">{d.tipo === 'justificar' ? 'O que causou o atraso?' : d.tipo === 'desassumir' ? 'Motivo (opcional)'
+            : `Detalhes${motivo === 'outro' ? ' (obrigatório)' : ' (opcional)'}`}</span>
             <textarea className="field" rows={3} maxLength={d.tipo === 'justificar' ? 500 : 300} value={texto} onChange={(e) => setTexto(e.target.value)}
-              placeholder={d.tipo === 'justificar' ? 'Ex.: dependia do fornecedor; aguardando o solicitante.' : ''} />
+              placeholder={d.tipo === 'justificar' ? 'Ex.: dependia do fornecedor; aguardando o solicitante.' : d.tipo === 'desassumir' ? 'Ex.: vou ficar fora; é de outra área.' : ''} />
             {d.tipo === 'justificar' && <small className="muted">Atraso justificado até a validação do chamado não gera penalidade.</small>}
           </label>
         )}
         {erro && <p className="erro" role="alert">{erro}</p>}
         <div className="acoes">
           <button type="button" className="btn sec" onClick={onFechar}>Cancelar</button>
-          <button type="submit" className="btn pri" disabled={!pronto || enviando}>{enviando ? 'Enviando…' : d.tipo === 'reabrir' ? 'Reabrir' : d.tipo === 'ajuda' ? 'Pedir ajuda' : 'Salvar justificativa'}</button>
+          <button type="submit" className="btn pri" disabled={!pronto || enviando}>{enviando ? 'Enviando…' : botoes[d.tipo]}</button>
         </div>
       </form>
     </div>
@@ -97,7 +105,7 @@ function OrigemHub({ c, nome }: { c: Chamado; nome: string | null }) {
 
 const fmt = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-export function Painel({ eu, catalogo, chamados, onAcao }: Props) {
+export function Painel({ eu, catalogo, chamados, onAcao, gestor = false }: Props) {
   const [filtro, setFiltro] = useState<Filtro>('abertos');
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [erro, setErro] = useState('');
@@ -229,18 +237,21 @@ export function Painel({ eu, catalogo, chamados, onAcao }: Props) {
                 <small>{res ? `resolvido em ${duracao(idade)}` : `aberto há ${duracao(idade)}`}</small>
               </span>
               <div className="who">
-                {!resp ? (
+                {!resp ? (gestor ? <span className="sub">Sem responsável</span> : (
                   <button className="mini go" type="button" disabled={bloqueado} onClick={() => executar('assumir', c.id)}>Assumir</button>
-                ) : (
+                )) : (
                   <>
                     <span className="av">{iniciais(resp.nome)}</span>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 500 }}>{resp.nome}</div>
                       <div className="sub" style={res ? { color: 'var(--ok)' } : undefined}>{res ? 'Resolvido' : 'Em andamento'}</div>
                     </div>
-                    {res && <button className="mini" type="button" disabled={bloqueado} onClick={() => setDialogo({ tipo: 'reabrir', c })}>Reabrir</button>}
+                    {res && !gestor && <button className="mini" type="button" disabled={bloqueado} onClick={() => setDialogo({ tipo: 'reabrir', c })}>Reabrir</button>}
                     {!res && resp.id === eu.id && <button className="mini" type="button" disabled={bloqueado} onClick={() => executar('resolver', c.id)}>Resolver</button>}
                     {!res && resp.id === eu.id && <button className="mini" type="button" title="Pedir ajuda a um colega" aria-label="Pedir ajuda" onClick={() => setDialogo({ tipo: 'ajuda', c })}>Ajuda</button>}
+                    {!res && (resp.id === eu.id || gestor) && (
+                      <button className="mini" type="button" disabled={bloqueado} title="Devolver o chamado para a fila, sem responsável" onClick={() => setDialogo({ tipo: 'desassumir', c })}>Desassumir</button>
+                    )}
                     {resp.id === eu.id && !c.justificativa_atraso && (c.resolvido_em ? new Date(c.resolvido_em).getTime() : agora) > new Date(c.prazo_em).getTime() && (
                       <button className="mini" type="button" title="Justificar o atraso evita a penalidade" onClick={() => setDialogo({ tipo: 'justificar', c })}>Justificar</button>
                     )}

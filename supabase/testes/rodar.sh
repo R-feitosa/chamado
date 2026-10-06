@@ -20,3 +20,4 @@ $P -o /dev/null -f supabase/testes/regras.sql
 $P -o /dev/null -f supabase/testes/gamificacao.sql
 $P -o /dev/null -f supabase/testes/notificacoes.sql
 $P -o /dev/null -f supabase/testes/chat.sql
+$P -o /dev/null -f supabase/testes/desassumir.sql

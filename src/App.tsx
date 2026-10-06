@@ -26,7 +26,7 @@ const ABAS_PUBLICAS: Aba[] = [{ tela: 'abrir', nome: 'Abrir chamado' }, { tela: 
 const ABAS_DEV: Aba[] = [{ tela: 'abrir', nome: 'Abrir chamado' }, { tela: 'painel', nome: 'Painel do time' }, { tela: 'analytics', nome: 'Analytics' }];
 const ABAS_DEV_GAM: Aba[] = [{ tela: 'abrir', nome: 'Abrir chamado' }, { tela: 'painel', nome: 'Painel do time' }, { tela: 'jornada', nome: 'Minha jornada' },
   { tela: 'ranking', nome: 'Ranking' }, { tela: 'analytics', nome: 'Analytics' }];
-const ABAS_GESTOR: Aba[] = [{ tela: 'ranking', nome: 'Ranking' }, { tela: 'analytics', nome: 'Analytics' }, { tela: 'central', nome: 'Gamificação' }];
+const ABAS_GESTOR: Aba[] = [{ tela: 'painel', nome: 'Painel do time' }, { tela: 'ranking', nome: 'Ranking' }, { tela: 'analytics', nome: 'Analytics' }, { tela: 'central', nome: 'Gamificação' }];
 
 /** Temporadas para o filtro do ranking. */
 function useTemporadas(ativo: boolean) {
@@ -207,6 +207,7 @@ function Gestor({ eu, catalogo }: { eu: Pessoa; catalogo: Catalogo }) {
         {tela === 'ranking' && <Ranking temporadas={temporadas} onPerfil={(id) => { setPerfilId(id); ir('perfil'); }} />}
         {tela === 'perfil' && perfilId && <Jornada pessoaId={perfilId} onVoltar={() => ir('ranking')} onPerfil={(id) => setPerfilId(id)} onRanking={() => ir('ranking')} />}
         {tela === 'analytics' && <Analytics catalogo={catalogo} chamados={chamados} />}
+        {tela === 'painel' && <Painel eu={eu} catalogo={catalogo} chamados={chamados} gestor />}
       </main>
     </>
   );

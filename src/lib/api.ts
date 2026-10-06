@@ -132,6 +132,11 @@ export async function reabrir(id: string, motivo: MotivoReabertura, texto: strin
   if (error) throw error;
 }
 
+export async function desassumir(id: string, motivo: string): Promise<void> {
+  const { error } = await supabase.rpc('desassumir_chamado', { p_id: id, p_motivo: motivo.trim() || null });
+  if (error) throw error;
+}
+
 export async function justificarAtraso(id: string, texto: string): Promise<void> {
   const { error } = await supabase.rpc('justificar_atraso', { p_id: id, p_texto: texto });
   if (error) throw error;

@@ -18,14 +18,14 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
 - **Abrir pelo botão do hub** (sem login, com token): todo sistema do hub pode ter um botão "Abrir chamado" que leva para a Central já identificado. Nome travado (do login do hub), setor travado quando o departamento do RH tem correspondência (senão a pessoa escolhe), cargo do RH (se o RH não tiver, a pessoa digita), sistema de origem pré-selecionado. Token tirado da barra de endereço ao abrir; vale 2 h e uma vez. Link vencido → aviso + formulário comum.
 - **Acompanhar** (sem login): consulta pelo protocolo (aceita "TI-0422" ou "422"); mostra situação, onde, urgência, responsável (primeiro nome) e prazos. Nunca a descrição nem os prints.
 - **"É dev/suporte? Entrar"** no topo: login com a conta dos sistemas ATLAS. Conta que não é dev/suporte vê "O login é só para o time".
-- **Painel do time** (dev/suporte, tela inicial após o login): contagens (em aberto, sem responsável, atrasados, meus), tempos (espera média sem responsável, mais antigo em aberto, % assumidos e % resolvidos no prazo nos últimos 30 dias), fila com coluna "Prazo" (etapa atual: assumir em X / resolver em X / atrasado X, e há quanto tempo está aberto), botões Assumir / Resolver / Reabrir, prints com ampliação.
+- **Painel do time** (dev/suporte, tela inicial após o login): contagens (em aberto, sem responsável, atrasados, meus), tempos (espera média sem responsável, mais antigo em aberto, % assumidos e % resolvidos no prazo nos últimos 30 dias), fila com coluna "Prazo" (etapa atual: assumir em X / resolver em X / atrasado X, e há quanto tempo está aberto), botões Assumir / Resolver / Desassumir / Reabrir, prints com ampliação.
 - **Analytics** (dev/suporte): período (7/30/90 dias/tudo); % assumidos e resolvidos no prazo; comparação Desenvolvimento × Suporte técnico; resolvidos por técnico (barras + % no prazo + tempo médio); mapas de calor técnico × sistema e técnico × setor de quem abriu.
 - Dev logado também pode abrir chamado (em nome próprio).
 - **Gamificação** (detalhes em `docs/GAMIFICACAO.md`; chave geral na Central, começa desligada):
   - **Minha jornada** (dev): nível/XP, ranking, Performance Score, sequências, missões, conquistas próximas, medalhas, feed, histórico de XP, títulos/molduras.
   - **Ranking** (dev e gestor): período × critério (padrão: score composto), temporadas encerradas congeladas; perfil de cada técnico.
   - **Central de Gamificação** (só gestor): chave, regras de XP, multiplicadores, score e limites, níveis, conquistas, missões, temporadas, recompensas, revisão de suspeitas, auditoria.
-  - **Gestor** (`pessoas.gestor`, hoje Roneely): entra com a conta ATLAS; vê Ranking, Analytics e a Central; não assume nem pontua.
+  - **Gestor** (`pessoas.gestor`, hoje Roneely): entra com a conta ATLAS; vê Painel do time (só lê e desassume), Ranking, Analytics e a Central; não assume nem pontua.
 - **Notificações** (dev/suporte e gestor): sino no topo → "Ativar neste aparelho" (Web Push; no iPhone só com a Central instalada na tela de início).
   Aviso **imediato** de chamado novo e **repetição enquanto ninguém assume**: Muito urgente a cada 5 min e Urgente a cada 15 min (24 h);
   Meio urgente a cada 1 h e Não urgente a cada 4 h (só no expediente, `gam_config.expediente`). Prazo de assumir vencido → avisa o gestor (1×).
@@ -91,7 +91,7 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
   Execução, Judicial/NUJI/CAC; Controladoria ← Controladoria; Administrativo e Financeiro ← Administrativo, Financeiro, RH.
   Departamento fora da tabela ou sem vínculo no RH: a pessoa escolhe o setor.
   Prints sem login vão para `chamados-prints/publico/<uuid>.<ext>` (só gravação; leitura só do time). Limite do bucket: 5 MB.
-- Escrita só por RPC `security definer` (`abrir_chamado`, `abrir_chamado_publico`, `assumir_chamado`, `resolver_chamado`, `reabrir_chamado`),
+- Escrita só por RPC `security definer` (`abrir_chamado`, `abrir_chamado_publico`, `assumir_chamado`, `desassumir_chamado`, `resolver_chamado`, `reabrir_chamado`),
   com `search_path = ''` e retorno `jsonb` (padrão do projeto). O front logado só lê, filtrado por RLS.
 - `update`/`delete` sempre com `where`: o projeto usa a extensão `safeupdate`.
 - Comandos destrutivos (`drop`, `delete`, `truncate`) pelo conector do Supabase exigem confirmação humana e expiram em sessão sem confirmação: preferir `revoke`/desativar, ou rodar no SQL Editor do Supabase.
@@ -120,6 +120,6 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
 
 ### Fluxo
 - Solicitante não faz login: informa setor, nome e cargo (obrigatórios, conferidos pelo banco), abre pelo formulário e acompanha pelo protocolo. Dev/suporte faz login e vê todos os chamados.
-- Assumir: dev, chamado sem responsável e não resolvido (grava `assumido_em`, base do "tempo até assumir"). Resolver: só o responsável. Reabrir: qualquer dev, **com motivo**; volta para "em andamento" com o mesmo responsável.
+- Assumir: dev, chamado sem responsável e não resolvido (grava `assumido_em`, base do "tempo até assumir"). Resolver: só o responsável. Desassumir: o responsável ou o gestor, motivo opcional; volta para "aberto" sem responsável e com os mesmos prazos, cancela pedidos de ajuda sem resposta e estorna o XP de resposta rápida ainda em validação (evento `desassumido`, ignorado pelo motor da gamificação). Reabrir: qualquer dev, **com motivo**; volta para "em andamento" com o mesmo responsável.
 - Pedir ajuda: só o responsável, chamado em andamento; o colega aceita ou recusa. Justificar atraso: só o responsável, com o prazo de resolver vencido.
 - Até 3 prints por chamado (PNG, JPG, WEBP, GIF; até 5 MB), gravados em `chamados-prints/publico/…` (sem login) ou `chamados-prints/<user_id>/…` (dev logado).
