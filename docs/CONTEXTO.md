@@ -144,6 +144,10 @@ validação por 72 h, Performance Score composto, antiabuso com revisão do gest
 ## 13. Notificações push (06/10/2026)
 - No ar: migration `20261006120000_notificacoes_push.sql` (aplicada em 3 partes pelo conector), Edge Function `chamados-push` (verify_jwt=false, autenticada pelo segredo do Vault), cron `chamados-push` (1 min), par VAPID gerado no Vault. Cada pessoa do time precisa clicar no sino → "Ativar neste aparelho" (e "Enviar teste"). Testes: `supabase/testes/notificacoes.sql`.
 
+- 06/10: 410 do FCM nos primeiros segundos após inscrever é passageiro (visto em produção: 410 no teste 2 s depois, 201 no seguinte).
+  `push_confirmar` só desativa por 404/410 inscrições com mais de 10 min (`20261006170000_push_inscricao_recente.sql`); antes disso conta falha.
+  A notificação que chega com a Central aberta e push inativo é a da própria aba (`useAlertas`), não a do servidor.
+
 ## 14. Chat descartável (06/10/2026)
 - No ar: migration `20261006140000_chat.sql` (aplicada em 2 partes: `chat_push_tipo`, que troca o check de `push_envios.tipo` para aceitar `chat`, e `chat`). Testes: `supabase/testes/chat.sql`.
 - Tabelas `chat_mensagens` (RLS: time lê; anon nunca lê a tabela; realtime ligado) e `chat_leituras` (não lidas por pessoa). Escrita só por RPC: `chat_ler`/`chat_enviar` (anon, protocolo + código secreto da abertura), `chat_enviar_time`, `chat_marcar_lido`, `chat_resumo` (time).

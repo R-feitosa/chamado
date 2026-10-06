@@ -124,6 +124,8 @@ select pg_temp.checa((select count(*) from vault.secrets where name like 'chamad
 select pg_temp.checa(((select valor from n where chave = 'lote')::jsonb #>> '{vapid,publicKey}') = pg_temp.chave(87, 'pub'), 'mantém o primeiro par');
 select pg_temp.checa(jsonb_array_length((select valor from n where chave = 'lote')::jsonb->'envios') > 0, 'lote com envios');
 select pg_temp.checa(jsonb_array_length((select valor from n where chave = 'lote')::jsonb #> '{envios,0,inscricoes}') = 1, 'envio leva os aparelhos da pessoa');
+-- Inscrição antiga: 410 desativa (as recentes têm carência, testada no fim).
+update chamados.push_inscricoes set atualizado_em = now() - interval '1 hour' where endpoint like '%aldo%';
 set role service_role;
 select chamados.push_confirmar((select valor from n where chave = 'seg'),
   (select jsonb_agg(jsonb_build_object('envio_id', (e->>'id')::bigint, 'concluido', true, 'detalhe', '{}'::jsonb))
@@ -157,6 +159,12 @@ delete from chamados.push_regras where nivel = 0;
 set role anon; select pg_temp.como('');
 select pg_temp.checa(chamados.abrir_chamado_publico(4, null, 'Pessoa Push Quatro', 'Analista', 1, 'Dúvida', 0)->>'protocolo' is not null, 'abre mesmo sem regra');
 reset role;
+-- 10. 410 logo depois de inscrever (FCM ainda propagando): não desativa, só conta falha.
+set role service_role;
+select chamados.push_confirmar((select valor from n where chave = 'seg'), '[]'::jsonb, '{}',
+  array(select id from chamados.push_inscricoes where endpoint like '%kaio-1'));
+reset role;
+select pg_temp.checa((select desativada_em is null and falhas_consecutivas = 1 from chamados.push_inscricoes where endpoint like '%kaio-1'), 'inscrição recente não é desativada por 410');
 insert into chamados.push_regras (nivel, repetir_min, so_expediente, vibrar, exigir_interacao) values (0, 240, true, '{120}', false);
 alter table chamados.push_regras enable row level security;
 \echo NOTIFICACOES: TODOS OS TESTES PASSARAM
