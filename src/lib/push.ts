@@ -16,6 +16,16 @@ export async function configPush(): Promise<ConfigPush> {
 }
 export const testarPush = () => rpc<{ enfileirado: number }>('push_testar');
 
+/** Mostra um aviso direto por este navegador, sem passar pelo servidor nem pelo Google (separa "não exibe" de "não chega"). */
+export async function testeLocal(): Promise<void> {
+  if (!suportaPush()) throw new Error('O navegador não aceita notificações.');
+  if (Notification.permission !== 'granted') throw new Error('O navegador bloqueou as notificações deste site. Clique no cadeado ao lado do endereço → Notificações → Permitir.');
+  const reg = await swPronto();
+  await reg.showNotification('🔔 Teste deste navegador', {
+    body: 'Se você está vendo isto, o computador mostra os avisos da Central.', tag: 'teste-local', icon: '/icon-192.png', badge: '/badge-72.png',
+  });
+}
+
 export function suportaPush(): boolean {
   return typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 }

@@ -51,8 +51,13 @@ export function Notificacoes({ a }: { a: Alertas }) {
               ? <button type="button" className="mini" disabled={a.ocupado} onClick={() => void a.desativar()}>Desativar</button>
               : <button type="button" className="btn pri notif-btn" disabled={a.ocupado || !a.suporta || ios} onClick={() => void a.ativar()}>{a.ocupado ? 'Ativando…' : 'Ativar neste aparelho'}</button>}
             {a.pushAtivo && <button type="button" className="mini go" disabled={a.ocupado} onClick={() => void a.testar()}>Enviar teste</button>}
+            {a.suporta && a.permissao === 'granted' && <button type="button" className="mini" disabled={a.ocupado} title="Mostra um aviso sem passar pelo servidor" onClick={() => void a.testarLocal()}>Testar aqui</button>}
           </div>
           {a.aviso && <p className="notif-aviso" role="status">{a.aviso}</p>}
+          {a.pushAtivo && (
+            <small className="muted notif-p">Não apareceu? "Testar aqui" também não aparece → no Windows, Configurações → Sistema → Notificações: ligue o navegador
+              e desligue o "Não incomodar". "Testar aqui" aparece mas "Enviar teste" não → a rede está bloqueando o serviço de push (Google).</small>
+          )}
           <label className="notif-som">
             <input type="checkbox" className="chave" checked={a.som} onChange={(e) => a.setSom(e.target.checked)} />
             <span><b>Som com a Central aberta</b><small>Fora dela, toca o som padrão do aparelho.</small></span>

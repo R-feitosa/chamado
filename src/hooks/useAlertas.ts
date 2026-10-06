@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { avisosDevidos, EXPEDIENTE_PADRAO, marcarVistos, REGRAS_PADRAO, type Aviso } from '../lib/alertas';
-import { ativarPush, configPush, desativarPush, garantirPush, inscricaoAtual, registrarSW, suportaPush, testarPush, type ConfigPush } from '../lib/push';
+import { ativarPush, configPush, desativarPush, garantirPush, inscricaoAtual, registrarSW, suportaPush, testarPush, testeLocal, type ConfigPush } from '../lib/push';
 import { definirSom, prepararAudio, somLigado, tocarSom } from '../lib/som';
 import { mensagemErro } from '../lib/formato';
 import { URGENCIAS, type Catalogo, type Chamado } from '../lib/tipos';
@@ -59,14 +59,15 @@ export function useAlertas({ chamados, catalogo, euId, avisar }: { chamados: Cha
     const id = ++seq.current;
     setAlertas((l) => [{ id, titulo, corpo, urgencia: c.urgencia }, ...l].slice(0, 4));
     window.setTimeout(() => setAlertas((l) => l.filter((x) => x.id !== id)), c.urgencia >= 2 ? 20_000 : 9_000);
-    // Sem push neste aparelho: a própria aba avisa o sistema sempre que a Central não estiver em foco.
-    if (!pushAtivo && !document.hasFocus() && suportaPush() && Notification.permission === 'granted') {
+    // A própria aba também avisa o sistema sempre que a Central não estiver em foco (mesmo com push ativo: se a rede
+    // bloquear o serviço de push, este aviso ainda aparece; a mesma tag do servidor evita aviso duplicado na tela).
+    if (!document.hasFocus() && suportaPush() && Notification.permission === 'granted') {
       void navigator.serviceWorker.getRegistration().then((reg) => reg?.showNotification(titulo, {
         body: corpo, tag: `chamado-${c.protocolo}`, icon: '/icon-192.png', badge: '/badge-72.png',
         requireInteraction: c.urgencia >= 2, data: { url: '/' },
       }));
     }
-  }, [nomeSistema, pushAtivo]);
+  }, [nomeSistema]);
 
   // Chamados novos (realtime) e lembretes (relógio), só para o time que assume.
   useEffect(() => {
@@ -108,6 +109,7 @@ export function useAlertas({ chamados, catalogo, euId, avisar }: { chamados: Cha
       await ativarPush(c.vapid_public_key);
     }, 'Notificações ativadas neste aparelho.'),
     desativar: () => executar(desativarPush, 'Notificações desativadas neste aparelho.'),
-    testar: () => executar(testarPush, 'Teste enviado. Deve chegar em alguns segundos.'),
+    testar: () => executar(testarPush, 'Teste enviado pelo servidor. Deve chegar em alguns segundos.'),
+    testarLocal: () => executar(testeLocal, 'Aviso mostrado agora por este navegador. Se nada apareceu na tela, o Windows ou o navegador está escondendo os avisos.'),
   };
 }
