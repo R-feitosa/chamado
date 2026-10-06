@@ -306,7 +306,7 @@ function LinkAvaliar({ protocolo, codigo }: { protocolo: string; codigo: string 
   }
   return (
     <div className="banner" style={{ margin: 0, flexDirection: 'column', alignItems: 'flex-start' }}>
-      <span>Quando o chamado for resolvido, avalie o atendimento em <b>Acompanhar</b>. Neste navegador já fica guardado; para outro aparelho, guarde este link:</span>
+      <span>Em <b>Acompanhar</b> você conversa com o time e, depois de resolvido, avalia o atendimento. Neste navegador já fica guardado; para outro aparelho, guarde este link:</span>
       <span style={{ display: 'flex', gap: 8, width: '100%', flexWrap: 'wrap' }}>
         <input className="field mono" readOnly value={link} aria-label="Link para avaliar depois" style={{ flex: '1 1 240px', minHeight: 40, fontSize: 12 }} onFocus={(e) => e.target.select()} />
         <button type="button" className="mini" onClick={() => void copiar()}>{copiado ? 'Copiado' : 'Copiar link'}</button>

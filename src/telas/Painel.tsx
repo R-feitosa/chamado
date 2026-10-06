@@ -8,6 +8,9 @@ import type { Catalogo, Chamado, Pessoa } from '../lib/tipos';
 import { MiniPrints } from '../componentes/MiniPrints';
 import { PilulaUrgencia } from '../componentes/Urgencia';
 import { Ampliar } from '../componentes/Ampliar';
+import { ChatTime } from '../componentes/Chat';
+import { resumoConversas, type ResumoChat } from '../lib/chat';
+import { supabase } from '../lib/supabase';
 
 interface Props { eu: Pessoa; catalogo: Catalogo; chamados: Chamado[]; onAcao?: () => void }
 
@@ -105,6 +108,20 @@ export function Painel({ eu, catalogo, chamados, onAcao }: Props) {
   useEffect(() => { carregarColabs(); }, [carregarColabs, chamados]);
   useEffect(() => { const t = setInterval(carregarColabs, 30_000); return () => clearInterval(t); }, [carregarColabs]);
   const devs = catalogo.pessoas.filter((p) => p.papel === 'dev' && p.ativo);
+  // Chat: contadores por chamado (atualiza a cada mensagem nova) e conversa aberta no painel lateral.
+  const [conversas, setConversas] = useState<Record<string, ResumoChat>>({});
+  const [conversa, setConversa] = useState<string | null>(null);
+  const carregarConversas = useCallback(() => { resumoConversas().then(setConversas).catch(() => undefined); }, []);
+  useEffect(() => {
+    carregarConversas();
+    const canal = supabase.channel('chat-resumo')
+      .on('postgres_changes', { event: 'INSERT', schema: 'chamados', table: 'chat_mensagens' }, () => carregarConversas())
+      .subscribe();
+    return () => { void supabase.removeChannel(canal); };
+  }, [carregarConversas]);
+  const podeConversar = (c: Chamado) => c.status !== 'resolvido' && eu.papel === 'dev' && (!c.responsavel_id || c.responsavel_id === eu.id
+    || colabs.some((x) => x.chamado_id === c.id && x.ajudante_id === eu.id && x.status === 'confirmada'));
+  const chatAberto = conversa ? chamados.find((c) => c.id === conversa) : undefined;
   const pedidosParaMim = colabs.filter((x) => x.ajudante_id === eu.id && x.status === 'pedida');
   async function responder(id: number, aceitar: boolean) {
     setErro('');
@@ -229,12 +246,34 @@ export function Painel({ eu, catalogo, chamados, onAcao }: Props) {
                     )}
                   </>
                 )}
+                {(() => {
+                  const r = conversas[c.id];
+                  if (!r && (res || !podeConversar(c))) return null;
+                  const n = r?.nao_lidas ?? 0;
+                  return (
+                    <button className={`mini conversa${n ? ' nova' : ''}`} type="button" onClick={() => setConversa(c.id)}
+                      title={n ? `${n} mensagem(ns) nova(s) de quem abriu` : 'Conversar com quem abriu'} aria-label={`Conversa${n ? `, ${n} nova(s)` : ''}`}>
+                      💬{r ? <span className="n">{r.total}</span> : null}{n ? <span className="conversa-n">{n}</span> : null}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           );
         })}
       </div>
       {ampliado && <Ampliar src={ampliado} onFechar={() => setAmpliado(null)} />}
+      {chatAberto && (
+        <div className="gaveta-fundo" onClick={(e) => { if (e.target === e.currentTarget) setConversa(null); }}>
+          <aside className="gaveta card" role="dialog" aria-label={`Conversa do ${chatAberto.protocolo}`}>
+            <button type="button" className="tfechar gaveta-x" aria-label="Fechar conversa" onClick={() => setConversa(null)}>×</button>
+            <p className="sub" style={{ margin: '0 0 6px' }}>{titulo(chatAberto.descricao)}</p>
+            <ChatTime chamadoId={chatAberto.id} protocolo={chatAberto.protocolo} resolvido={chatAberto.status === 'resolvido'}
+              resolvidoEm={chatAberto.resolvido_em} podeEscrever={podeConversar(chatAberto)} onLido={carregarConversas}
+              outroNome={quemAbriu(chatAberto, pessoa, catalogo.setores).nome.split(' ')[0]} />
+          </aside>
+        </div>
+      )}
       {dialogo && <Dialogos d={dialogo} eu={eu} devs={devs} onFechar={() => setDialogo(null)} onFeito={() => { setDialogo(null); carregarColabs(); onAcao?.(); }} />}
     </section>
   );

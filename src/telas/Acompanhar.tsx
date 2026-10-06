@@ -6,6 +6,7 @@ import { situacaoPrazo, textoPrazo } from '../lib/sla';
 import { duracao } from '../lib/analytics';
 import type { Chamado } from '../lib/tipos';
 import { PilulaUrgencia } from '../componentes/Urgencia';
+import { ChatSolicitante } from '../componentes/Chat';
 
 const fmt = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
@@ -74,6 +75,9 @@ export function Acompanhar({ inicial = '', codigoInicial }: { inicial?: string; 
               <dt>Resolver até</dt><dd>{fmt(resultado.prazo_em)}{resultado.resolvido_em && ` · resolvido em ${fmt(resultado.resolvido_em)}`}</dd>
             </dl>
             <Avaliacao consulta={resultado} codigo={codigoInicial ?? codigoDe(resultado.protocolo)} onAvaliado={() => void buscar(resultado.protocolo)} />
+            {(codigoInicial ?? codigoDe(resultado.protocolo))
+              ? <ChatSolicitante key={resultado.protocolo} protocolo={resultado.protocolo} codigo={(codigoInicial ?? codigoDe(resultado.protocolo))!} />
+              : <p className="muted" style={{ margin: 0, fontSize: 13 }}>Para conversar com o time, abra pelo link que apareceu quando você abriu o chamado (ou use o navegador em que você o abriu).</p>}
           </>
         )}
       </div>

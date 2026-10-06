@@ -144,3 +144,9 @@ validação por 72 h, Performance Score composto, antiabuso com revisão do gest
 ## 13. Notificações push (06/10/2026)
 - No ar: migration `20261006120000_notificacoes_push.sql` (aplicada em 3 partes pelo conector), Edge Function `chamados-push` (verify_jwt=false, autenticada pelo segredo do Vault), cron `chamados-push` (1 min), par VAPID gerado no Vault. Cada pessoa do time precisa clicar no sino → "Ativar neste aparelho" (e "Enviar teste"). Testes: `supabase/testes/notificacoes.sql`.
 
+## 14. Chat descartável (06/10/2026)
+- No ar: migration `20261006140000_chat.sql` (aplicada em 2 partes: `chat_push_tipo`, que troca o check de `push_envios.tipo` para aceitar `chat`, e `chat`). Testes: `supabase/testes/chat.sql`.
+- Tabelas `chat_mensagens` (RLS: time lê; anon nunca lê a tabela; realtime ligado) e `chat_leituras` (não lidas por pessoa). Escrita só por RPC: `chat_ler`/`chat_enviar` (anon, protocolo + código secreto da abertura), `chat_enviar_time`, `chat_marcar_lido`, `chat_resumo` (time).
+- Descarte: `chat_descartar()` roda dentro de `push_agendar()` (cron `chamados-push`, 1 min) e zera o texto 24 h após resolver.
+- Front: `src/lib/chat.ts` (+ testes), `src/componentes/Chat.tsx` (`ChatSolicitante` consulta a cada 5 s/30 s em segundo plano; `ChatTime` em tempo real), Acompanhar e gaveta 💬 no Painel.
+- Sem o código (outro navegador, link perdido) quem abriu só consulta o protocolo, sem chat.

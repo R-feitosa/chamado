@@ -34,6 +34,11 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
   Motor: gatilho `chamados_push_novo` + `chamados.push_agendar()` (pg_cron 1 min) → fila `push_envios` → `push_disparar()` (pg_net) →
   Edge Function `chamados-push` (`supabase/functions/`, Web Push/VAPID próprio, mesmo desenho do Atlas Ponto). Inscrições canceladas/expiradas
   ficam desativadas (`desativada_em`), nada é apagado.
+- **Chat descartável** (quem abriu ↔ time): quem abriu entra em **Acompanhar** com o código secreto da abertura (o mesmo da avaliação,
+  guardado no navegador e no link "acompanhar e conversar"); o time abre pelo 💬 de cada linha do Painel (contador de não lidas, tempo real).
+  Escrevem o responsável e quem aceitou ajudar (antes de alguém assumir, qualquer dev); gestor e demais só leem. Fecha ao resolver (só leitura),
+  o **texto é apagado 24 h depois** (`texto` nulo + `apagada_em`, nada é deletado) e reabrir reabre. Mensagem de quem abriu → push `chat`
+  (sem o texto) para o responsável + ajudantes ou, sem responsável, para o time. Aviso fixo: não enviar senhas nem dados pessoais.
 - Fluxo novo usado pela gamificação: **avaliação** (1–5 estrelas + elogio) com código secreto gerado na abertura sem login (link "avaliar depois"), **pedir ajuda** a colega (o colega confirma), **justificar atraso**, **reabrir com motivo** (não estava resolvido / voltou / outro).
 
 ## Sistemas atendidos
@@ -62,10 +67,10 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
 - Projeto **ATLAS - INTEGRADO** (`ashxrwwlcarvqdigoxsi`), compartilhado com os outros sistemas do grupo.
 - Tudo da Central fica no schema **`chamados`**. Não criar nada em `public` nem em outros schemas.
   Únicas exceções, exigidas pelo Supabase: bucket privado `chamados-prints` (+ policies em `storage.objects`
-  filtradas por esse bucket), `chamados.chamados` na publicação `supabase_realtime` e os dois agendamentos do `pg_cron`
+  filtradas por esse bucket), `chamados.chamados` e `chamados.chat_mensagens` na publicação `supabase_realtime` e os dois agendamentos do `pg_cron`
   (`chamados-gam-ciclo`, `chamados-gam-periodos`, em `cron.job`) que rodam o motor da gamificação; o agendamento `chamados-push`
   (notificações) e os segredos do push no **Vault** (`chamados_push_dispatch_secret`, `chamados_push_vapid_public/private`).
-- Tabelas: `setores`, `pessoas` (nome, setor, papel solicitante/dev, `gestor`, e-mail de login), `sistemas`, `chamados`, `eventos` (histórico, `detalhe`), `avaliacoes`, `colaboracoes`.
+- Tabelas: `setores`, `pessoas` (nome, setor, papel solicitante/dev, `gestor`, e-mail de login), `sistemas`, `chamados`, `eventos` (histórico, `detalhe`), `avaliacoes`, `colaboracoes`, `chat_mensagens`, `chat_leituras`.
 - Gamificação: tabelas `gam_*` (config, regras, multiplicadores, níveis, conquistas/tiers, missões, temporadas, recompensas, fila `gam_eventos`, ledger `gam_xp`, perfis, sequências, resultados de missão, ranking congelado, notificações, suspeitas, auditoria). Escrita só pelo motor/RPCs `gam_*`; `pg_cron` roda `gam_ciclo` (1 min) e `gam_fechar_periodos` (15 min).
 - Login (só dev/suporte): o mesmo `auth.users` dos sistemas ATLAS, ligado à pessoa pelo e-mail no primeiro acesso
   (`chamados.vincular_minha_conta`). Para liberar um dev: preencher `chamados.pessoas.email`.
@@ -75,6 +80,7 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
   - `consultar_chamado(protocolo)`: situação, prazos e primeiro nome do responsável;
   - `ler_convite(token)` e `abrir_chamado_por_convite(token, setor, cargo, …)`: fluxo do botão do hub (abaixo).
   - `avaliar_chamado(protocolo, codigo, nota, elogio, comentario)`: só com o código secreto devolvido na abertura (o banco guarda só o hash); 1 vez, chamado resolvido, até 14 dias.
+  - `chat_ler(protocolo, codigo, depois)` e `chat_enviar(protocolo, codigo, texto)`: chat com o mesmo código secreto; 10 mensagens/min e 200 por chamado.
 - **Botão do hub (padrão DISC):** `gerar_link_chamado(sistema, url, contexto)` só para `authenticated` com conta ativa
   (`acessos.eh_usuario_ativo()`); lê nome (`hub.pessoas`), e-mail (`auth.users`), departamento e cargo (`rh.vw_vinculos_atuais`,
   vínculo mais recente) no servidor; grava em `chamados.convites` só o hash SHA-256 do token (32 bytes); limite 20 links/h;

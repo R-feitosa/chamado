@@ -377,3 +377,34 @@ textarea.field.json{font-family:var(--mono);font-size:13px;min-height:120px}
 .toast.aviso-u3{background:linear-gradient(180deg,var(--bad-soft),var(--surface) 75%)}
 @media (prefers-reduced-motion:no-preference){.toast.aviso-u3{animation:pulsar 1s ease-in-out 3}}
 @keyframes pulsar{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--bad) 25%,transparent),0 10px 30px rgba(0,0,0,.12)}}
+
+/* ===== Chat ===== */
+.chat-bloco{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:16px}
+.chat-bloco>b{font-size:15px}
+.chat{display:flex;flex-direction:column;gap:10px}
+.chat-lista{max-height:360px;min-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:12px;border-radius:14px;background:var(--soft)}
+.chat-vazio{margin:auto;color:var(--ink3);font-size:13px}
+.chat-dia{display:flex;justify-content:center;margin:8px 0 4px}
+.chat-dia span{font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--ink3);background:var(--surface);border-radius:999px;padding:2px 10px}
+.msg{display:flex;flex-direction:column;max-width:80%;margin:4px 0}
+.msg.minha{align-self:flex-end;align-items:flex-end}
+.msg.outra{align-self:flex-start}
+.msg-quem{font-size:11px;color:var(--ink3);margin:0 6px 2px}
+.msg-balao{font-size:14px;line-height:20px;padding:8px 12px;border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.minha .msg-balao{background:var(--accent);color:var(--on-accent);border-bottom-right-radius:4px}
+.msg.outra .msg-balao{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-bottom-left-radius:4px}
+.msg.apagada .msg-balao{background:transparent;color:var(--ink3);border:1px dashed var(--line);font-style:italic}
+.chat-envio{display:flex;flex-direction:column;gap:6px}
+.chat-envio textarea{min-height:64px;resize:vertical}
+.chat-envio-pe{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.chat-envio-pe small{font-size:12px}
+.chat-envio-pe .btn{min-height:40px;padding:8px 18px}
+.chat-aviso{margin:0;font-size:13px;color:var(--ink2);background:var(--soft);border-radius:10px;padding:10px 12px}
+.mini.conversa{position:relative;display:inline-flex;align-items:center;gap:4px}
+.mini.conversa.nova{border-color:var(--brand-wine);background:var(--brand-wine-soft)}
+.conversa-n{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:999px;background:var(--brand-wine);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px}
+.gaveta-fundo{position:fixed;inset:0;z-index:30;background:rgba(8,10,14,.35);display:flex;justify-content:flex-end}
+.gaveta{position:relative;width:min(460px,100%);height:100%;border-radius:20px 0 0 20px;padding:22px 20px;overflow-y:auto;display:flex;flex-direction:column}
+.gaveta .chat-lista{max-height:none;flex:1;min-height:240px}
+.gaveta .chat-bloco{border-top:none;padding-top:0;flex:1}
+.gaveta-x{position:absolute;top:14px;right:14px}
