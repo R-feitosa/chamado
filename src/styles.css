@@ -95,7 +95,6 @@ label.lbl,.lbl{font-size:14px;font-weight:600;display:block}
 .row.head{padding:10px 20px;background:var(--soft);font-size:12px;font-weight:500;color:var(--ink3)}
 .row:last-child{border-bottom:none}
 .t{font-weight:500;line-height:21px}
-.t.res{color:var(--ink3);text-decoration:line-through}
 .sub{font-size:13px;color:var(--ink3);line-height:18px}
 .desc{font-size:13px;color:var(--ink2);margin-top:4px;line-height:18px}
 .sys{justify-self:start;font-size:12px;font-weight:500;padding:4px 8px;border-radius:8px;background:var(--soft);color:var(--ink2)}

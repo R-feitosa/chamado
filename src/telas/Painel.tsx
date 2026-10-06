@@ -217,7 +217,7 @@ export function Painel({ eu, catalogo, chamados, onAcao, gestor = false }: Props
             <div className="row" key={c.id}>
               <span className="mono muted id" style={{ fontSize: 13 }}>{c.protocolo}</span>
               <div style={{ minWidth: 0 }}>
-                <div className={`t${res ? ' res' : ''}`} title={c.descricao}>{titulo(c.descricao)}</div>
+                <div className="t" title={c.descricao}>{titulo(c.descricao)}</div>
                 <div className="sub">
                   {sol.nome}{sol.cargo ? ` · ${sol.cargo}` : ''}{sol.setor ? ` · ${sol.setor}` : ''}
                 </div>
