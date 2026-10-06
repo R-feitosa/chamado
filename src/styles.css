@@ -351,3 +351,29 @@ textarea.field.json{font-family:var(--mono);font-size:13px;min-height:120px}
 :root[data-theme="dark"] .selo-n{color:#1a0505}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .selo-n{color:#1a0505}}
 @media (max-width:520px){.brand-sep,.brand-nome{display:none}.logo-chip img{height:26px}}
+
+/* ===== Notificações ===== */
+.notif{position:relative}
+.sino{position:relative;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.sino:hover{border-color:var(--accent);color:var(--ink)}
+.sino.on{color:var(--accent-ink);background:var(--accent-soft);border-color:transparent}
+.sino-dot{position:absolute;top:7px;right:8px;width:8px;height:8px;border-radius:999px;background:var(--warn);border:2px solid var(--surface)}
+.notif-pop{position:absolute;right:0;top:calc(100% + 8px);z-index:40;width:min(380px,calc(100vw - 32px));padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 18px 50px rgba(14,17,22,.16)}
+.notif-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.notif-h b{font-size:16px}
+.notif-p{margin:0;font-size:13px;line-height:19px}
+.notif-acoes{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.notif-btn{min-height:40px;padding:8px 16px;font-size:14px}
+.notif-aviso{margin:0;font-size:13px;color:var(--ink2);background:var(--soft);border-radius:10px;padding:8px 10px}
+.notif-som{display:flex;gap:12px;align-items:center;font-size:14px;cursor:pointer}
+.notif-som small{display:block;font-size:12px;color:var(--ink3);font-weight:400}
+.notif-regras{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.notif-regras small{font-size:12px;line-height:17px}
+.notif-regra{display:grid;grid-template-columns:128px minmax(0,1fr) 30px;gap:8px;align-items:center;font-size:13px;color:var(--ink2)}
+.ouvir{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink2);cursor:pointer;font-size:11px}
+.ouvir:hover{border-color:var(--accent);color:var(--accent-ink)}
+.avisos{position:fixed;right:16px;top:84px;z-index:35;display:flex;flex-direction:column;gap:10px;width:min(360px,calc(100vw - 32px))}
+.toast.aviso{border-left:5px solid var(--uc,var(--accent))}
+.toast.aviso-u3{background:linear-gradient(180deg,var(--bad-soft),var(--surface) 75%)}
+@media (prefers-reduced-motion:no-preference){.toast.aviso-u3{animation:pulsar 1s ease-in-out 3}}
+@keyframes pulsar{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--bad) 25%,transparent),0 10px 30px rgba(0,0,0,.12)}}

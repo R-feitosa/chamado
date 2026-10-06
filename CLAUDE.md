@@ -26,6 +26,14 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
   - **Ranking** (dev e gestor): período × critério (padrão: score composto), temporadas encerradas congeladas; perfil de cada técnico.
   - **Central de Gamificação** (só gestor): chave, regras de XP, multiplicadores, score e limites, níveis, conquistas, missões, temporadas, recompensas, revisão de suspeitas, auditoria.
   - **Gestor** (`pessoas.gestor`, hoje Roneely): entra com a conta ATLAS; vê Ranking, Analytics e a Central; não assume nem pontua.
+- **Notificações** (dev/suporte e gestor): sino no topo → "Ativar neste aparelho" (Web Push; no iPhone só com a Central instalada na tela de início).
+  Aviso **imediato** de chamado novo e **repetição enquanto ninguém assume**: Muito urgente a cada 5 min e Urgente a cada 15 min (24 h);
+  Meio urgente a cada 1 h e Não urgente a cada 4 h (só no expediente, `gam_config.expediente`). Prazo de assumir vencido → avisa o gestor (1×).
+  Responsável: aviso com prazo de resolver perto (últimos 25%) e vencido. Com a Central aberta toca **som por urgência** (Web Audio, `src/lib/som.ts`);
+  fora dela, o som padrão do aparelho. Regras em `chamados.push_regras` (espelho em `src/lib/alertas.ts`). Payload sem descrição nem nomes.
+  Motor: gatilho `chamados_push_novo` + `chamados.push_agendar()` (pg_cron 1 min) → fila `push_envios` → `push_disparar()` (pg_net) →
+  Edge Function `chamados-push` (`supabase/functions/`, Web Push/VAPID próprio, mesmo desenho do Atlas Ponto). Inscrições canceladas/expiradas
+  ficam desativadas (`desativada_em`), nada é apagado.
 - Fluxo novo usado pela gamificação: **avaliação** (1–5 estrelas + elogio) com código secreto gerado na abertura sem login (link "avaliar depois"), **pedir ajuda** a colega (o colega confirma), **justificar atraso**, **reabrir com motivo** (não estava resolvido / voltou / outro).
 
 ## Sistemas atendidos
@@ -55,7 +63,8 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
 - Tudo da Central fica no schema **`chamados`**. Não criar nada em `public` nem em outros schemas.
   Únicas exceções, exigidas pelo Supabase: bucket privado `chamados-prints` (+ policies em `storage.objects`
   filtradas por esse bucket), `chamados.chamados` na publicação `supabase_realtime` e os dois agendamentos do `pg_cron`
-  (`chamados-gam-ciclo`, `chamados-gam-periodos`, em `cron.job`) que rodam o motor da gamificação.
+  (`chamados-gam-ciclo`, `chamados-gam-periodos`, em `cron.job`) que rodam o motor da gamificação; o agendamento `chamados-push`
+  (notificações) e os segredos do push no **Vault** (`chamados_push_dispatch_secret`, `chamados_push_vapid_public/private`).
 - Tabelas: `setores`, `pessoas` (nome, setor, papel solicitante/dev, `gestor`, e-mail de login), `sistemas`, `chamados`, `eventos` (histórico, `detalhe`), `avaliacoes`, `colaboracoes`.
 - Gamificação: tabelas `gam_*` (config, regras, multiplicadores, níveis, conquistas/tiers, missões, temporadas, recompensas, fila `gam_eventos`, ledger `gam_xp`, perfis, sequências, resultados de missão, ranking congelado, notificações, suspeitas, auditoria). Escrita só pelo motor/RPCs `gam_*`; `pg_cron` roda `gam_ciclo` (1 min) e `gam_fechar_periodos` (15 min).
 - Login (só dev/suporte): o mesmo `auth.users` dos sistemas ATLAS, ligado à pessoa pelo e-mail no primeiro acesso

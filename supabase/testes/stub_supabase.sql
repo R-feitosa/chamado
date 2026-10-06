@@ -1,5 +1,5 @@
 -- Simula o mínimo do Supabase para testar a migration num Postgres puro.
-create role anon nologin; create role authenticated nologin; create role service_role nologin;
+create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
 create schema auth; create schema storage;
 grant usage on schema auth, storage, public to anon, authenticated;
 create table auth.users (id uuid primary key, email text);
@@ -26,3 +26,13 @@ create table rh.vw_vinculos_atuais (pessoa_id uuid, departamento_nome text, carg
 create function acessos.eh_usuario_ativo() returns boolean language sql stable security definer set search_path = '' as $$
   select exists (select 1 from acessos.usuarios u where u.id = auth.uid() and u.status = 'ativo') $$;
 grant usage on schema acessos to authenticated; grant execute on function acessos.eh_usuario_ativo() to authenticated;
+-- Vault e pg_net (notificações push): só o necessário para os testes.
+create schema vault;
+create table vault.secrets (id uuid primary key default gen_random_uuid(), name text unique, secret text, description text);
+create view vault.decrypted_secrets as select id, name, secret as decrypted_secret from vault.secrets;
+create function vault.create_secret(new_secret text, new_name text default null, new_description text default '') returns uuid
+  language sql as $$ insert into vault.secrets (name, secret, description) values (new_name, new_secret, new_description) returning id $$;
+create schema net;
+create table net.chamadas (id bigserial primary key, url text, body jsonb, headers jsonb, em timestamptz default now());
+create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds integer default 5000)
+  returns bigint language sql as $$ insert into net.chamadas (url, body, headers) values (url, body, headers) returning id $$;

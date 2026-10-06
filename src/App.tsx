@@ -16,6 +16,8 @@ import { useGamificacao } from './hooks/useGamificacao';
 import { listarTemporadas } from './lib/apiGam';
 import { CentralL as CentralGamificacao, JornadaL as Jornada, RankingL as Ranking, SeloXPL as SeloXP, ToastsL as Toasts } from './componentes/gam/Lazy';
 import { avaliacaoDaUrl, guardarCodigo, urlSemAvaliacao } from './lib/avaliacao';
+import { useAlertas } from './hooks/useAlertas';
+import { AvisosNaTela, Notificacoes } from './componentes/Notificacoes';
 
 type Tela = 'abrir' | 'acompanhar' | 'entrar' | 'painel' | 'analytics' | 'jornada' | 'ranking' | 'central' | 'perfil';
 type Aba = { tela: Tela; nome: string };
@@ -139,6 +141,7 @@ function Dev({ eu, userId, catalogo }: { eu: Pessoa; userId: string; catalogo: C
     return t === 'abrir' && !location.hash ? 'painel' : t;
   });
   const { chamados, conexao } = useChamados();
+  const alertas = useAlertas({ chamados, catalogo, euId: eu.id, avisar: true });
   const [, setTique] = useState(0);
   const abertos = chamados.filter((c) => c.status !== 'resolvido').length;
   const ir = (t: Tela) => irPara(t, setTela);
@@ -157,6 +160,7 @@ function Dev({ eu, userId, catalogo }: { eu: Pessoa; userId: string; catalogo: C
   return (
     <>
       <Cabecalho abas={abas} tela={tela} onTela={ir} contador={abertos}>
+        <Notificacoes a={alertas} />
         {gamAtivo && gam.jornada?.perfil ? <SeloXP jornada={gam.jornada} ganho={gam.ganho} onAbrir={() => ir('jornada')} />
           : <span className="papel" title={eu.nome}>{eu.nome.split(' ')[0]} · {NOME_PAPEL[eu.papel]}</span>}
         <button className="sair" type="button" onClick={() => { history.replaceState(null, '', location.pathname); void supabase.auth.signOut(); }}>Sair</button>
@@ -178,6 +182,7 @@ function Dev({ eu, userId, catalogo }: { eu: Pessoa; userId: string; catalogo: C
         {tela === 'perfil' && gamAtivo && perfilId && <Jornada pessoaId={perfilId} onPerfil={verPerfil} onVoltar={() => ir('ranking')} onRanking={() => ir('ranking')} />}
       </main>
       {gamAtivo && <Toasts itens={gam.toasts} onFechar={gam.fecharToast} />}
+      <AvisosNaTela a={alertas} onVer={() => ir('painel')} />
     </>
   );
 }
@@ -187,11 +192,13 @@ function Gestor({ eu, catalogo }: { eu: Pessoa; catalogo: Catalogo }) {
   const [tela, setTela] = useState<Tela>(() => { const h = location.hash.slice(1) as Tela; return ABAS_GESTOR.some((a) => a.tela === h) ? h : 'central'; });
   const ir = (t: Tela) => irPara(t, setTela);
   const { chamados } = useChamados();
+  const alertas = useAlertas({ chamados, catalogo, euId: eu.id, avisar: false });
   const temporadas = useTemporadas(true);
   const [perfilId, setPerfilId] = useState<string | null>(null);
   return (
     <>
       <Cabecalho abas={ABAS_GESTOR} tela={tela} onTela={ir}>
+        <Notificacoes a={alertas} />
         <span className="papel" title={eu.nome}>{eu.nome.split(' ')[0]} · Gestor</span>
         <button className="sair" type="button" onClick={() => { history.replaceState(null, '', location.pathname); void supabase.auth.signOut(); }}>Sair</button>
       </Cabecalho>

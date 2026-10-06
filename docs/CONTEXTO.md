@@ -140,3 +140,7 @@ validação por 72 h, Performance Score composto, antiabuso com revisão do gest
 
 ## 12. Identidade visual (05/10/2026)
 - Aplicado o Manual de Marca RF Group (nov/25): logo do grupo (p. 3 do manual) no topo, ampulheta como favicon (`public/`), faixa degradê da marca sob o topo e paleta marinho #212965 (principal), vinho #6d0001 (destaque) e cinza #727272. Tokens em `src/styles.css` (`--accent*`, `--brand-*`). Urgências e raridades mantêm as cores próprias.
+
+## 13. Notificações push (06/10/2026)
+- No ar: migration `20261006120000_notificacoes_push.sql` (aplicada em 3 partes pelo conector), Edge Function `chamados-push` (verify_jwt=false, autenticada pelo segredo do Vault), cron `chamados-push` (1 min), par VAPID gerado no Vault. Cada pessoa do time precisa clicar no sino → "Ativar neste aparelho" (e "Enviar teste"). Testes: `supabase/testes/notificacoes.sql`.
+

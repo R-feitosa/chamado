@@ -18,3 +18,4 @@ for f in supabase/migrations/*.sql; do
 done
 $P -o /dev/null -f supabase/testes/regras.sql
 $P -o /dev/null -f supabase/testes/gamificacao.sql
+$P -o /dev/null -f supabase/testes/notificacoes.sql
