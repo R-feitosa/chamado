@@ -48,7 +48,8 @@ Nova regra = linha em `gam_regras` + (se for um fato novo) um tratador em `gam_p
   sem reabertura +10, ajuda +10, 5★ +25, 4★ +10, elogio +20; penalidades: reaberto −10, encerrado incorretamente −20,
   SLA estourado sem justificativa −10. Cada regra tem ON/OFF, limite por chamado e limite diário.
 - **Ledger `gam_xp`**: cada linha tem pessoa, evento, chamado, regra/conquista/missão, valor, motivo, status e `chave`
-  única por pessoa → o mesmo fato nunca paga duas vezes. Total = soma das linhas `confirmado` (`gam_perfis` é cache).
+  única por pessoa → o mesmo fato nunca paga duas vezes. XP exibido e nível = soma das linhas `confirmado` + `pendente` (o XP **conta na hora**, decisão de 07/10/2026);
+  `retido` só entra depois da revisão do gestor (`gam_perfis` é cache; guarda confirmado e pendente separados).
 - **Status**: `pendente` (72 h de validação) → `confirmado`; `estornado` (reaberto na validação ou suspeita rejeitada);
   `retido` (suspeita em revisão).
 - Resolver de novo um chamado reaberto **não paga de novo** (as chaves já existem).

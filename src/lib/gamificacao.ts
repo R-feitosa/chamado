@@ -27,7 +27,8 @@ export interface Sequencia { tipo: 'sem_reabertura' | 'sla' | 'cinco_estrelas' |
 export interface Jornada {
   ativo: boolean; participa?: boolean; gestor?: boolean; privado?: boolean;
   pessoa?: { id: string; nome: string; cargo: string };
-  perfil?: { xp: number; xp_pendente: number; nivel: Nivel; titulo: { id: number; nome: string; raridade: Raridade } | null;
+  /** xp = confirmado + em validação (conta na hora); xp_pendente = parte ainda em validação (pode ser estornada). */
+  perfil?: { xp: number; xp_pendente: number; xp_confirmado?: number; nivel: Nivel; titulo: { id: number; nome: string; raridade: Raridade } | null;
              moldura: { id: number; codigo: string; nome: string; raridade: Raridade } | null };
   temporada?: { id: number; nome: string; inicio: string; fim: string } | null;
   ranking?: { posicao: number | null; classificado: boolean | null; total: number; score: number | null; minimo: number };

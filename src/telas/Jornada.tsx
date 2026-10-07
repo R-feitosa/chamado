@@ -20,7 +20,8 @@ function Cards({ d }: { d: Dados }) {
   const p = d.perfil!; const n = p.nivel;
   const seqMax = Math.max(0, ...(d.sequencias ?? []).filter((s) => s.tipo !== 'semanas_sla').map((s) => s.atual));
   const itens = [
-    { k: 'XP', v: fmtXp(p.xp), s: p.xp_pendente ? `+${fmtXp(p.xp_pendente)} em validação` : 'confirmado', t: 'XP confirmado. O que está em validação entra depois de 72 h sem reabertura.' },
+    { k: 'XP', v: fmtXp(p.xp), s: p.xp_pendente ? `${fmtXp(p.xp_pendente)} ainda em validação` : 'tudo confirmado',
+      t: 'O XP conta na hora. A parte em validação é estornada se o chamado for reaberto nas primeiras 72 h.' },
     { k: 'Ranking', v: d.ranking?.posicao && d.ranking.classificado ? `#${d.ranking.posicao}` : '—',
       s: d.ranking?.classificado ? `de ${d.ranking.total} na temporada` : `em formação (mín. ${d.ranking?.minimo ?? 5} resolvidos)`, t: 'Posição pelo Performance Score da temporada.' },
     { k: 'Performance', v: d.estatisticas ? Math.round(d.estatisticas.score).toString() : '—', s: 'score de 0 a 100', t: 'Qualidade, SLA, satisfação, produtividade e colaboração.' },

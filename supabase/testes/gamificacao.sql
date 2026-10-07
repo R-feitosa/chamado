@@ -271,7 +271,8 @@ select pg_temp.checa((select count(*) from chamados.gam_missoes_resultado) = (se
 set role authenticated;
 select pg_temp.como('00000000-0000-0000-0000-00000000000b');
 do $$ declare j jsonb := chamados.gam_jornada(); r jsonb; begin
-  perform pg_temp.checa((j->>'participa')::boolean and (j->'perfil'->>'xp')::int = pg_temp.xp('Kaio'), 'jornada = ledger');
+  perform pg_temp.checa((j->>'participa')::boolean and (j->'perfil'->>'xp')::int = pg_temp.xp('Kaio') + pg_temp.xp('Kaio', 'pendente')
+    and (j->'perfil'->>'xp_confirmado')::int = pg_temp.xp('Kaio'), 'jornada = ledger (XP conta na hora)');
   perform pg_temp.checa((j->'perfil'->'nivel'->>'nivel')::int = 1 and (j->'perfil'->'nivel'->>'xp_proximo')::int = 500, 'nível 1 até 500');
   perform pg_temp.checa(jsonb_array_length(j->'conquistas') >= 15 and jsonb_array_length(j->'missoes') >= 4, 'conquistas e missões');
   perform pg_temp.checa((j->>'nao_lidas')::int > 0 and jsonb_array_length(j->'feed') > 0 and jsonb_array_length(j->'historico') > 0, 'feed e histórico');
@@ -322,6 +323,18 @@ do $$ begin
       greatest((select coalesce(sum(valor), 0) from chamados.gam_xp x where x.pessoa_id = p.pessoa_id and x.status = 'confirmado'), 0)), 'perfil = ledger');
   perform pg_temp.checa((select count(*) from chamados.gam_eventos where status = 'erro') = 0,
     'eventos com erro: ' || coalesce((select string_agg(tipo || ': ' || erro, ' | ') from chamados.gam_eventos where status = 'erro'), ''));
+end $$;
+
+-- 15b. XP em validação já conta para o nível; estorno devolve.
+do $$ declare a uuid := (select id from chamados.pessoas where nome = 'Aldo'); antes int; begin
+  perform chamados.gam_atualizar_perfil(a);
+  antes := (select nivel from chamados.gam_perfis where pessoa_id = a);
+  perform chamados.gam_lancar(a, 'teste:xp-imediato', 2000, 'Teste', 'pendente', null, null, null, null, null, now() + interval '72 hours');
+  perform chamados.gam_atualizar_perfil(a);
+  perform pg_temp.checa((select nivel from chamados.gam_perfis where pessoa_id = a) > antes, 'pendente sobe o nível na hora');
+  update chamados.gam_xp set status = 'estornado' where pessoa_id = a and chave = 'teste:xp-imediato';
+  perform chamados.gam_atualizar_perfil(a);
+  perform pg_temp.checa((select nivel from chamados.gam_perfis where pessoa_id = a) = antes, 'estorno devolve o nível');
 end $$;
 
 -- 16. Desligar: eventos novos são ignorados.

@@ -22,7 +22,7 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
 - **Analytics** (dev/suporte): período (7/30/90 dias/tudo); % assumidos e resolvidos no prazo; comparação Desenvolvimento × Suporte técnico; resolvidos por técnico (barras + % no prazo + tempo médio); mapas de calor técnico × sistema e técnico × setor de quem abriu.
 - Dev logado também pode abrir chamado (em nome próprio).
 - **Gamificação** (detalhes em `docs/GAMIFICACAO.md`; chave geral na Central, começa desligada):
-  - **Minha jornada** (dev): nível/XP, ranking, Performance Score, sequências, missões, conquistas próximas, medalhas, feed, histórico de XP, títulos/molduras.
+  - **Minha jornada** (dev): nível/XP (o XP conta na hora; a parte "em validação" é estornada se o chamado for reaberto em 72 h), ranking, Performance Score, sequências, missões, conquistas próximas, medalhas, feed, histórico de XP, títulos/molduras.
   - **Ranking** (dev e gestor): período × critério (padrão: score composto), temporadas encerradas congeladas; perfil de cada técnico.
   - **Central de Gamificação** (só gestor): chave, regras de XP, multiplicadores, score e limites, níveis, conquistas, missões, temporadas, recompensas, revisão de suspeitas, auditoria.
   - **Gestor** (`pessoas.gestor`, hoje Roneely): entra com a conta ATLAS; vê Painel do time (só lê e desassume), Ranking, Analytics e a Central; não assume nem pontua.

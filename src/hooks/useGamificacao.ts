@@ -25,7 +25,7 @@ export function useGamificacao(habilitado: boolean) {
       const j = await lerJornada();
       setJornada(j);
       if (!j.perfil) return;
-      const total = j.perfil.xp + j.perfil.xp_pendente;
+      const total = j.perfil.xp; // já inclui o XP em validação
       if (xpAnterior.current !== null && total !== xpAnterior.current) setGanho({ id: Date.now(), valor: total - xpAnterior.current });
       xpAnterior.current = total;
       const feed = j.feed ?? [];

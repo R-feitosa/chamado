@@ -7,7 +7,7 @@ export function SeloXP({ jornada, ganho, onAbrir }: { jornada: Jornada; ganho: {
   const p = jornada.perfil;
   if (!p) return null;
   const n = p.nivel;
-  const texto = `Nível ${n.nivel} (${n.nome}) · ${fmtXp(n.xp)} de ${fmtXp(n.xp_proximo)} XP${p.xp_pendente ? ` · ${fmtXp(p.xp_pendente)} em validação` : ''}`;
+  const texto = `Nível ${n.nivel} (${n.nome}) · ${fmtXp(n.xp)} de ${fmtXp(n.xp_proximo)} XP${p.xp_pendente ? ` (${fmtXp(p.xp_pendente)} ainda em validação)` : ''}`;
   return (
     <button type="button" className="selo" onClick={onAbrir} title={texto} aria-label={`${texto}. Abrir Minha jornada`}>
       <span className="selo-n">Nv {n.nivel}</span>
