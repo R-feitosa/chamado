@@ -5,6 +5,38 @@ import { CRITERIOS, fmtXp, PERIODOS, pct, type Criterio, type Periodo, type Rank
 import { mensagemErro } from '../lib/formato';
 import { Avatar } from './Jornada';
 
+type Linha = Dados['linhas'][number];
+const MEDALHA = ['ouro', 'prata', 'bronze'] as const;
+
+/** Pódio dos 3 primeiros: 2º à esquerda, 1º no centro (mais alto), 3º à direita, nas cores ouro, prata e bronze. */
+function Podio({ linhas, valor, onPerfil }: { linhas: Linha[]; valor: (l: Linha) => string; onPerfil: (id: string) => void }) {
+  const top = linhas.slice(0, 3);
+  if (!top.length) return null;
+  const ordem = [top[1], top[0], top[2]].filter(Boolean) as Linha[];
+  const provisorio = top.some((l) => !l.classificado);
+  return (
+    <div className="podio-bloco">
+      <ol className="podio" aria-label="Pódio">
+        {ordem.map((l) => {
+          const m = MEDALHA[l.posicao - 1] ?? 'bronze';
+          return (
+            <li key={l.pessoa_id} className={`degrau d${l.posicao} ${m}${l.eu ? ' voce' : ''}`}>
+              <button type="button" className="podio-quem" onClick={() => onPerfil(l.pessoa_id)} title={`${l.posicao}º lugar · ver perfil`}>
+                <span className="podio-medalha" aria-hidden="true">{l.posicao}</span>
+                <Avatar nome={l.nome} moldura={l.moldura} />
+                <b>{l.eu ? `${l.nome.split(' ')[0]} (você)` : l.nome}</b>
+                <small>{valor(l)}</small>
+              </button>
+              <div className="podio-base"><span className="podio-num">{l.posicao}º</span></div>
+            </li>
+          );
+        })}
+      </ol>
+      {provisorio && <p className="muted podio-nota">Pódio provisório: ainda sem o mínimo de chamados resolvidos para a classificação oficial.</p>}
+    </div>
+  );
+}
+
 /** Leaderboard: período × critério (padrão: Performance Score), temporadas encerradas congeladas. */
 export function Ranking({ temporadas, onPerfil }: { temporadas: { id: number; nome: string; status: string }[]; onPerfil: (id: string) => void }) {
   const reduzir = useReducedMotion();
@@ -26,7 +58,7 @@ export function Ranking({ temporadas, onPerfil }: { temporadas: { id: number; no
   }, [periodo, criterio, temporada]);
 
   const ajuda = CRITERIOS.find((c) => c.chave === criterio)?.ajuda;
-  const valor = (l: Dados['linhas'][number]) =>
+  const valor = (l: Linha) =>
     criterio === 'xp' ? `${fmtXp(l.xp)} XP` : criterio === 'resolvidos' ? String(l.resolvidos)
       : criterio === 'score' ? (l.score !== null ? Math.round(l.score).toString() : '—') : pct(l.valor ?? null);
 
@@ -52,6 +84,7 @@ export function Ranking({ temporadas, onPerfil }: { temporadas: { id: number; no
       <p className="muted" style={{ marginTop: -6, fontSize: 13 }}>{temporada ? 'Ranking congelado no encerramento da temporada.' : ajuda}
         {!temporada && criterio === 'score' && dados?.minimo ? ` Mínimo de ${dados.minimo} resolvidos no período para ser classificado.` : ''}</p>
       {erro && <p className="erro" role="alert">{erro}</p>}
+      {dados && <Podio linhas={dados.linhas} valor={valor} onPerfil={onPerfil} />}
       <div className="card fila">
         <div className="rk head"><span>#</span><span>Técnico</span><span>{CRITERIOS.find((c) => c.chave === (dados?.congelado ? 'score' : criterio))?.nome}</span><span className="opt">XP</span><span>SLA</span><span className="opt">Resolvidos</span><span className="opt">Satisfação</span></div>
         <LayoutGroup>
@@ -61,8 +94,9 @@ export function Ranking({ temporadas, onPerfil }: { temporadas: { id: number; no
             return (
               <motion.div layout={!reduzir} key={l.pessoa_id} className={`rk${l.eu ? ' voce' : ''}${l.classificado ? '' : ' fora'}`}
                 initial={false} animate={subiu && !reduzir ? { backgroundColor: ['var(--ok-soft)', 'rgba(0,0,0,0)'] } : undefined} transition={{ duration: 1.2 }}>
-                <span className={`pos p${l.posicao}`} title={l.classificado ? `${l.posicao}º lugar` : 'Em formação: ainda sem o mínimo de chamados'}>
-                  {l.classificado ? l.posicao : '–'}{subiu && <span className="sr"> (subiu)</span>}
+                <span className={`pos p${l.posicao}${l.posicao <= 3 ? ` med ${MEDALHA[l.posicao - 1]}` : ''}`}
+                  title={l.classificado ? `${l.posicao}º lugar` : `${l.posicao}º lugar (em formação: ainda sem o mínimo de chamados)`}>
+                  {l.posicao}º{subiu && <span className="sr"> (subiu)</span>}
                 </span>
                 <span className="quem">
                   <Avatar nome={l.nome} moldura={l.moldura} />

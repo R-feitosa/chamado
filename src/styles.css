@@ -269,7 +269,9 @@ label.lbl,.lbl{font-size:14px;font-weight:600;display:block}
 .rk.voce{background:var(--accent-soft)}
 .rk.fora{color:var(--ink3)}
 .rk .pos{font-family:var(--mono);font-weight:600;font-size:15px}
-.rk .pos.p1{color:var(--legend)} .rk .pos.p2{color:var(--ink2)} .rk .pos.p3{color:var(--legend-2)}
+.rk .pos{color:var(--ink2)}
+.rk .pos.med{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;font-size:13px;color:#2a1d00;box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
+.rk .pos.ouro{background:var(--ouro)} .rk .pos.prata{background:var(--prata);color:#1f2329} .rk .pos.bronze{background:var(--bronze);color:#2b1406}
 .rk .quem{display:flex;align-items:center;gap:10px;min-width:0}
 .rk .quem button{border:none;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left;min-width:0}
 .rk .quem button:hover b{text-decoration:underline}
@@ -411,4 +413,30 @@ textarea.field.json{font-family:var(--mono);font-size:13px;min-height:120px}
 .faixa-push>svg{flex:none;width:18px;height:18px}
 .faixa-push>span{flex:1 1 260px}
 .faixa-push .faixa-aviso{display:block;margin-top:4px;color:var(--ink2)}
+/* Pódio do ranking: cores de medalha iguais nos dois temas (metal com texto escuro). */
+:root{--ouro:linear-gradient(145deg,#fbe38a,#e2b33c 55%,#b8860b);--prata:linear-gradient(145deg,#f3f5f7,#c3c8cf 55%,#8e959e);
+  --bronze:linear-gradient(145deg,#f1c59a,#cd7f32 55%,#8c4f1d);--ouro-borda:#c9971f;--prata-borda:#9aa1aa;--bronze-borda:#a3622a}
+.podio-bloco{margin:4px 0 20px}
+.podio{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end;max-width:640px;margin-inline:auto}
+.degrau{display:flex;flex-direction:column;align-items:center;min-width:0}
+.podio-quem{display:flex;flex-direction:column;align-items:center;gap:4px;border:none;background:none;padding:6px 4px 10px;font:inherit;color:var(--ink);cursor:pointer;min-width:0;max-width:100%;position:relative}
+.podio-quem:hover b{text-decoration:underline}
+.podio-quem b{font-size:14px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.podio-quem small{font-size:13px;color:var(--ink2);font-variant-numeric:tabular-nums;font-weight:600}
+.podio-quem .avg{width:48px;height:48px;font-size:16px}
+.d1 .podio-quem .avg{width:60px;height:60px;font-size:19px}
+.podio-medalha{position:absolute;top:0;right:calc(50% - 38px);z-index:1;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:600 12px var(--mono);color:#2a1d00;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.d1 .podio-medalha{right:calc(50% - 44px)}
+.ouro .podio-medalha{background:var(--ouro)} .prata .podio-medalha{background:var(--prata);color:#1f2329} .bronze .podio-medalha{background:var(--bronze);color:#2b1406}
+.podio-base{width:100%;border-radius:12px 12px 4px 4px;display:grid;place-items:center;box-shadow:inset 0 -6px 0 rgba(0,0,0,.12)}
+.ouro .podio-base{background:var(--ouro);border:1px solid var(--ouro-borda);height:118px}
+.prata .podio-base{background:var(--prata);border:1px solid var(--prata-borda);height:88px}
+.bronze .podio-base{background:var(--bronze);border:1px solid var(--bronze-borda);height:66px}
+.podio-num{font:700 26px var(--mono);color:rgba(30,20,0,.78);text-shadow:0 1px 0 rgba(255,255,255,.45)}
+.d1 .podio-num{font-size:34px}
+.degrau.voce .podio-quem b{color:var(--accent-ink)}
+.podio-nota{text-align:center;font-size:12px;margin:8px 0 0}
+@media (max-width:560px){.podio{gap:8px}.ouro .podio-base{height:92px}.prata .podio-base{height:70px}.bronze .podio-base{height:54px}.podio-num{font-size:20px}.d1 .podio-num{font-size:26px}}
+@media (prefers-reduced-motion:no-preference){.degrau{animation:podio-sobe .5s ease-out both}.d1{animation-delay:.1s}.d3{animation-delay:.2s}}
+@keyframes podio-sobe{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 
