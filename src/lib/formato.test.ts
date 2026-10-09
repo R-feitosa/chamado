@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { faltaSolicitante, faltando, filtrarPrints, iniciais, limparTexto, mensagemErro, quando, SETOR_OUTRO, titulo } from './formato';
 
 describe('iniciais', () => {
-  it('usa primeira letra de nome e sobrenome', () => expect(iniciais('Brenno Magalhães')).toBe('BM'));
+  it('usa primeira letra de nome e sobrenome', () => expect(iniciais('Breno Magalhães')).toBe('BM'));
   it('nome único usa duas primeiras letras', () => expect(iniciais('Kaio')).toBe('KA'));
   it('vazio vira traço', () => expect(iniciais('  ')).toBe('—'));
 });

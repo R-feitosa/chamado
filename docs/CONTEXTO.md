@@ -161,3 +161,6 @@ validação por 72 h, Performance Score composto, antiabuso com revisão do gest
 - Efeitos: status "aberto", sem responsável e sem `assumido_em` (prazos da abertura mantidos; reassumir conta de novo no "assumidos no prazo"); pedidos de ajuda pendentes viram recusados; avisos de prazo do antigo responsável cancelados; XP de "resposta rápida" pendente/retido estornado (e não paga de novo se a mesma pessoa reassumir).
 - Armadilha corrigida: `gam_publicar_evento` tratava qualquer ação fora da lista como `ticket.reopened`; agora ignora `desassumido`.
 
+## 16. Nomes (09/10/2026)
+- Grafia correta: **Brenno Azevedo** (igual ao hub) e **Breno Magalhães** (`20261009120000_nomes_brenos.sql`). Nas seções antigas acima, "Breno Azevedo" = Brenno Azevedo e "Brenno Magalhães" = Breno Magalhães.
+

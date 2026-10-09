@@ -5,7 +5,7 @@ Sistema interno de chamados de sistemas do R. Feitosa Group.
 Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolvimento assume e resolve.
 
 ## Pessoas
-- Time de desenvolvimento (quem resolve): Aldo, Brenno Magalhães, Breno Azevedo, João Pedro, Ruan, Kaio.
+- Time de desenvolvimento (quem resolve): Aldo, Brenno Azevedo, Breno Magalhães, João Pedro, Ruan, Kaio.
 - Solicitantes (quem abre), por setor:
   - Sócios: Roneely Feitosa, Anderson Mesquita, Fábio Mendes
   - Administrativo e Financeiro: Tayse Feitosa
