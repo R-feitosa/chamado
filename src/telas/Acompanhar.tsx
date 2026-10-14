@@ -7,6 +7,7 @@ import { duracao } from '../lib/analytics';
 import type { Chamado } from '../lib/tipos';
 import { PilulaUrgencia } from '../componentes/Urgencia';
 import { ChatSolicitante } from '../componentes/Chat';
+import { AvisoTemporario } from '../componentes/AvisoTemporario';
 
 const fmt = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
@@ -51,6 +52,8 @@ export function Acompanhar({ inicial = '', codigoInicial }: { inicial?: string; 
         <h1>Acompanhar chamado</h1>
         <p>Digite o protocolo que apareceu quando você abriu o chamado.</p>
       </div>
+
+      <AvisoTemporario />
       <div className="card done" style={{ maxWidth: 620 }}>
         <form onSubmit={enviar} style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <label className="sr" htmlFor="protocolo">Protocolo</label>
