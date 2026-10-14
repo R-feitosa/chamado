@@ -439,4 +439,9 @@ textarea.field.json{font-family:var(--mono);font-size:13px;min-height:120px}
 @media (max-width:560px){.podio{gap:8px}.ouro .podio-base{height:92px}.prata .podio-base{height:70px}.bronze .podio-base{height:54px}.podio-num{font-size:20px}.d1 .podio-num{font-size:26px}}
 @media (prefers-reduced-motion:no-preference){.degrau{animation:podio-sobe .5s ease-out both}.d1{animation-delay:.1s}.d3{animation-delay:.2s}}
 @keyframes podio-sobe{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-.banner.aviso-temp{background:var(--warn-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent)}
+.aviso-temp{display:flex;gap:14px;align-items:flex-start;margin:0 0 24px;padding:16px 20px;border-radius:14px;
+  background:var(--warn-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);border-left:6px solid var(--warn);
+  box-shadow:0 6px 18px -10px color-mix(in srgb,var(--warn) 60%,transparent)}
+.aviso-temp-ic{font-size:24px;line-height:1.1}
+.aviso-temp b{display:block;font-size:16px;color:var(--warn);margin-bottom:3px}
+.aviso-temp span{font-size:15px;line-height:1.45}
