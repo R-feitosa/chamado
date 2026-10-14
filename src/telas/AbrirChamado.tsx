@@ -7,6 +7,13 @@ import { AnexarPrints, type PrintLocal } from '../componentes/AnexarPrints';
 import { guardarCodigo, linkAvaliacao } from '../lib/avaliacao';
 import { Check, Seta } from '../componentes/Icones';
 
+/** Aviso temporário no formulário (some sozinho depois de `ate`, horário de Brasília). */
+const AVISO_TEMPORARIO = {
+  de: new Date('2026-10-13T00:00:00-03:00').getTime(),
+  ate: new Date('2026-10-17T23:59:59-03:00').getTime(),
+  texto: 'De 13 a 17/10, os chamados podem demorar um pouco mais para ser atendidos por conta do Connect Valley. Obrigado pela compreensão!',
+};
+
 /**
  * Com login (time): o nome vem da conta. Sem login: a pessoa escolhe o setor (ou "Outro") e
  * digita nome e cargo, ou chega pelo botão de um sistema do hub (convite) com nome e, em geral, setor já definidos.
@@ -117,6 +124,7 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar,
     setSistema(null); setDescricao(''); setUrgencia(URGENCIA_PADRAO); setPrints([]); setErro(''); setEnviado(null);
   }
 
+  const avisoAtivo = Date.now() >= AVISO_TEMPORARIO.de && Date.now() <= AVISO_TEMPORARIO.ate;
   return (
     <section>
       <div className="hero">
@@ -124,6 +132,8 @@ export function AbrirChamado({ quem, catalogo, ativa, onVerPainel, onAcompanhar,
         <h1>Algum sistema ou equipamento deu problema?</h1>
         <p>Conte o que aconteceu e o chamado chega na hora para o time de desenvolvimento e suporte.</p>
       </div>
+
+      {avisoAtivo && !enviado && <p className="banner aviso-temp" role="status">{AVISO_TEMPORARIO.texto}</p>}
 
       {enviado ? (
         <div className="card done">
