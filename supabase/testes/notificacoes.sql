@@ -86,7 +86,7 @@ select pg_temp.checa((select max(seq) from chamados.push_envios where tipo = 'le
 update chamados.chamados set prazo_em = now() + interval '5 minutes' where protocolo = (select valor from n where chave = 'mu');
 select chamados.push_agendar(); select chamados.push_agendar();
 select pg_temp.checa(pg_temp.envios((select valor from n where chave = 'mu'), 'prazo_perto', 'Kaio') = 1, 'prazo perto para o responsável');
-select pg_temp.checa(pg_temp.envios((select valor from n where chave = 'mu'), 'prazo_perto', 'Aldo') = 0, 'só o responsável');
+select pg_temp.checa(pg_temp.envios((select valor from n where chave = 'mu'), 'prazo_perto', 'Aldo Júnior') = 0, 'só o responsável');
 update chamados.chamados set prazo_em = now() - interval '1 minute' where protocolo = (select valor from n where chave = 'mu');
 select chamados.push_agendar(); select chamados.push_agendar();
 select pg_temp.checa(pg_temp.envios((select valor from n where chave = 'mu'), 'prazo_vencido', 'Kaio') = 1, 'prazo vencido 1×');

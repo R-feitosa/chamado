@@ -163,4 +163,4 @@ validação por 72 h, Performance Score composto, antiabuso com revisão do gest
 
 ## 16. Nomes (09/10/2026)
 - Grafia correta: **Brenno Azevedo** (igual ao hub) e **Breno Magalhães** (`20261009120000_nomes_brenos.sql`). Nas seções antigas acima, "Breno Azevedo" = Brenno Azevedo e "Brenno Magalhães" = Breno Magalhães.
-
+- 22/10/2026: "Aldo" passa a se chamar **Aldo Júnior** (`20261022120000_nome_aldo.sql`); login continua o corporativo.

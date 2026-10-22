@@ -34,7 +34,7 @@ reset role;
 set role authenticated; select pg_temp.como('00000000-0000-0000-0000-00000000000b');
 select pg_temp.falha($$select chamados.desassumir_chamado(pg_temp.id())$$, 'já está sem responsável');
 select chamados.assumir_chamado(pg_temp.id());
-select chamados.pedir_ajuda(pg_temp.id(), (select id from chamados.pessoas where nome = 'Aldo'));
+select chamados.pedir_ajuda(pg_temp.id(), (select id from chamados.pessoas where nome = 'Aldo Júnior'));
 reset role;
 select chamados.gam_ciclo();
 select pg_temp.checa(exists (select 1 from chamados.gam_xp where chamado_id = pg_temp.id() and regra_codigo = 'resposta_rapida' and status = 'pendente'), 'resposta rápida pendente');

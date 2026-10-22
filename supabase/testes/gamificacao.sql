@@ -173,7 +173,7 @@ set role authenticated;
 select chamados.resolver_chamado(pg_temp.ch((select valor from t where chave = 'p5')));
 reset role;
 select pg_temp.ciclo();
-select pg_temp.checa(pg_temp.xp('Aldo', 'pendente') = 0 and chamados.gam_inelegivel(pg_temp.ch((select valor from t where chave = 'p5'))) = 'aberto pelo próprio time', 'chamado do time não pontua');
+select pg_temp.checa(pg_temp.xp('Aldo Júnior', 'pendente') = 0 and chamados.gam_inelegivel(pg_temp.ch((select valor from t where chave = 'p5'))) = 'aberto pelo próprio time', 'chamado do time não pontua');
 
 -- 9. Colaboração: só o responsável pede; o colega confirma; XP do colega na validação.
 set role anon;
@@ -183,7 +183,7 @@ set role authenticated;
 select pg_temp.como('00000000-0000-0000-0000-00000000000b');
 select chamados.assumir_chamado(pg_temp.ch((select valor from t where chave = 'p6')));
 select pg_temp.falha(format('select chamados.pedir_ajuda(%L, %L)', pg_temp.ch((select valor from t where chave = 'p6')), '00000000-0000-0000-0000-000000000000'), 'colega');
-select chamados.pedir_ajuda(pg_temp.ch((select valor from t where chave = 'p6')), (select id from chamados.pessoas where nome = 'Aldo'));
+select chamados.pedir_ajuda(pg_temp.ch((select valor from t where chave = 'p6')), (select id from chamados.pessoas where nome = 'Aldo Júnior'));
 select pg_temp.como('00000000-0000-0000-0000-00000000000c');
 select pg_temp.falha(format('select chamados.pedir_ajuda(%L, %L)', pg_temp.ch((select valor from t where chave = 'p6')), (select id from chamados.pessoas where nome = 'Kaio')), 'Só o responsável');
 select chamados.responder_ajuda((select id from chamados.colaboracoes order by id desc limit 1), true);
@@ -212,7 +212,7 @@ select pg_temp.ciclo();
 update chamados.gam_xp set confirmar_em = now() - interval '1 second' where status = 'pendente';
 select pg_temp.ciclo();
 do $$ begin
-  perform pg_temp.checa(pg_temp.xp('Aldo') = 10, 'Aldo ganhou pela ajuda: ' || pg_temp.xp('Aldo'));
+  perform pg_temp.checa(pg_temp.xp('Aldo Júnior') = 10, 'Aldo ganhou pela ajuda: ' || pg_temp.xp('Aldo Júnior'));
   perform pg_temp.checa(not exists (select 1 from chamados.gam_xp x join chamados.chamados c on c.id = x.chamado_id where c.descricao = 'P6 com ajuda' and x.regra_codigo = 'sla_sem_justificativa'), 'justificado não penaliza');
   perform pg_temp.checa(exists (select 1 from chamados.gam_xp x join chamados.chamados c on c.id = x.chamado_id where c.descricao = 'P7 atrasado' and x.regra_codigo = 'sla_sem_justificativa' and x.valor = -10), 'atraso sem justificativa penaliza');
   perform pg_temp.checa(not exists (select 1 from chamados.gam_xp where status = 'pendente' and regra_codigo = 'resolvido'), 'tudo validado');
@@ -281,7 +281,7 @@ do $$ declare j jsonb := chamados.gam_jornada(); r jsonb; begin
   r := chamados.gam_ranking('temporada', 'score');
   perform pg_temp.checa(jsonb_array_length(r->'linhas') = (select count(*) from chamados.pessoas where papel = 'dev' and ativo and not gestor), 'ranking com o time todo');
   perform pg_temp.checa((select count(*) from chamados.gam_xp x where x.pessoa_id <> chamados.eu_pessoa_id()) = 0, 'só o próprio ledger');
-  perform pg_temp.checa((chamados.gam_jornada((select id from chamados.pessoas where nome = 'Aldo'))->'historico') = 'null'::jsonb, 'histórico alheio é privado');
+  perform pg_temp.checa((chamados.gam_jornada((select id from chamados.pessoas where nome = 'Aldo Júnior'))->'historico') = 'null'::jsonb, 'histórico alheio é privado');
 end $$;
 select pg_temp.falha($$select chamados.gam_ranking('geral', 'quantidade')$$, 'Critério inválido');
 select chamados.gam_marcar_lidas();
@@ -326,7 +326,7 @@ do $$ begin
 end $$;
 
 -- 15b. XP em validação já conta para o nível; estorno devolve.
-do $$ declare a uuid := (select id from chamados.pessoas where nome = 'Aldo'); antes int; begin
+do $$ declare a uuid := (select id from chamados.pessoas where nome = 'Aldo Júnior'); antes int; begin
   perform chamados.gam_atualizar_perfil(a);
   antes := (select nivel from chamados.gam_perfis where pessoa_id = a);
   perform chamados.gam_lancar(a, 'teste:xp-imediato', 2000, 'Teste', 'pendente', null, null, null, null, null, now() + interval '72 hours');

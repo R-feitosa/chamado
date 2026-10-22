@@ -8,7 +8,7 @@ insert into auth.users values
   ('00000000-0000-0000-0000-00000000000e', 'tamira@teste.com');
 update chamados.pessoas set email = 'roneely@teste.com' where nome = 'Roneely Feitosa';
 update chamados.pessoas set email = 'kaio@teste.com' where nome = 'Kaio';
-update chamados.pessoas set email = 'aldo@teste.com' where nome = 'Aldo';
+update chamados.pessoas set email = 'aldo@teste.com' where nome = 'Aldo Júnior';
 update chamados.pessoas set email = 'tamira@teste.com' where nome = 'Tamira';
 
 create function pg_temp.como(u text) returns void language sql as $$ select set_config('teste.uid', u, false) $$;

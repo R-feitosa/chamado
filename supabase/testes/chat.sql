@@ -50,7 +50,7 @@ select pg_temp.falha($$select chamados.chat_enviar_time(pg_temp.id(), 'gestor aq
 select pg_temp.checa((select count(*) from chamados.chat_mensagens where chamado_id = pg_temp.id()) = 3, 'gestor lê a conversa');
 -- Ajuda confirmada libera o colega.
 select pg_temp.como('00000000-0000-0000-0000-00000000000b');
-select chamados.pedir_ajuda(pg_temp.id(), (select id from chamados.pessoas where nome = 'Aldo'));
+select chamados.pedir_ajuda(pg_temp.id(), (select id from chamados.pessoas where nome = 'Aldo Júnior'));
 select pg_temp.como('00000000-0000-0000-0000-00000000000c');
 select chamados.responder_ajuda((select id from chamados.colaboracoes where chamado_id = pg_temp.id()), true);
 select chamados.chat_enviar_time(pg_temp.id(), 'Ajudando aqui.');
