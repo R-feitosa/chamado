@@ -77,7 +77,7 @@ Taxas suavizadas (bayes): (acertos + k · média do time) / (n + k), k = 5
 ## 5. Balanceamento e antiabuso
 | Risco | Proteção |
 |---|---|
-| Fechar rápido para pontuar | XP de resolução pendente 72 h; reabertura estorna e penaliza; resolução < 3 min após assumir → revisão |
+| Fechar rápido para pontuar | XP de resolução pendente 72 h; reabertura estorna e penaliza; resolução < 3 min **desde a abertura** → revisão (desde 26/10/2026; antes contava desde assumir e barrava quem resolve e só depois clica) |
 | Chamado falso / próprio | Sem XP se aberto por dev/gestor (`origem = login`), solicitante do time ou chamado próprio |
 | Fechar/reabrir repetidamente | 1 pagamento por chamado; ≥ 2 reaberturas → revisão; reaberturas de chamados de colegas (≥ 3/7 dias) → revisão |
 | Muitos chamados triviais | Multiplicador só na resolução (1,0/1,2/1,5/2,0, teto 2,0); retorno decrescente (do 9º "Não urgente" do dia: 50%); teto diário de 400 XP de resolução; produtividade com raiz |

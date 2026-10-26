@@ -337,6 +337,20 @@ do $$ declare a uuid := (select id from chamados.pessoas where nome = 'Aldo Jún
   perform pg_temp.checa((select nivel from chamados.gam_perfis where pessoa_id = a) = antes, 'estorno devolve o nível');
 end $$;
 
+-- 15c. Resolução rápida depois de assumir, em chamado aberto há mais tempo: não é suspeita (conta desde a abertura).
+set role anon;
+insert into t values ('pr1', (chamados.abrir_chamado_publico(3, null, 'Caio Teste', 'Analista', 1, 'P9 trabalhado antes de assumir', 1))->>'protocolo');
+reset role;
+update chamados.chamados set criado_em = now() - interval '40 minutes' where id = pg_temp.ch((select valor from t where chave = 'pr1'));
+set role authenticated;
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select chamados.assumir_chamado(pg_temp.ch((select valor from t where chave = 'pr1')));
+select chamados.resolver_chamado(pg_temp.ch((select valor from t where chave = 'pr1')));
+reset role;
+select pg_temp.ciclo();
+select pg_temp.checa(not exists (select 1 from chamados.gam_suspeitas where chamado_id = pg_temp.ch((select valor from t where chave = 'pr1'))), 'assumir e resolver em segundos, aberto há 40 min: sem suspeita');
+select pg_temp.checa(not exists (select 1 from chamados.gam_xp where chamado_id = pg_temp.ch((select valor from t where chave = 'pr1')) and status = 'retido'), 'XP não fica retido');
+
 -- 16. Desligar: eventos novos são ignorados.
 set role authenticated;
 select pg_temp.como('00000000-0000-0000-0000-00000000000a');
