@@ -86,5 +86,29 @@ select pg_temp.checa(pg_temp.st('Aldo Júnior') = 'confirmada', 'voltou como con
 set role anon;
 select pg_temp.falha($$select chamados.adicionar_contribuinte(pg_temp.ch(), pg_temp.pid('Ruan'))$$, 'permission denied');
 reset role;
+-- 7. Fluxo antigo "Ajuda" (pedido + aceite) também vai para o Notion quando o colega aceita.
+set role anon; select pg_temp.como('');
+insert into x select 'p2', chamados.abrir_chamado_publico(4, null, 'Pessoa Ajuda', 'Analista', 1, 'Pedido de ajuda antigo', 1)->>'protocolo';
+reset role;
+create function pg_temp.ch2() returns uuid language sql security definer as $f$ select id from chamados.chamados where protocolo = (select valor from x where chave = 'p2') $f$;
+grant execute on function pg_temp.ch2() to authenticated, service_role;
+set role authenticated; select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select chamados.assumir_chamado(pg_temp.ch2());
+reset role;
+set role service_role;
+insert into x select 'l2', chamados.notion_lote(pg_temp.v('seg'))::text;
+select chamados.notion_confirmar(pg_temp.v('seg'), jsonb_build_array(jsonb_build_object('ok', true, 'chamado_id', pg_temp.ch2(),
+  'page_id', 'pagina-ajuda', 'envio_ids', (select e->'envio_ids' from jsonb_array_elements((pg_temp.v('l2'))::jsonb->'itens') e where e->>'protocolo' = pg_temp.v('p2')))));
+reset role;
+set role authenticated; select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select chamados.pedir_ajuda(pg_temp.ch2(), pg_temp.pid('Aldo Júnior'));
+select pg_temp.como('00000000-0000-0000-0000-00000000000c');
+select chamados.responder_ajuda((select id from chamados.colaboracoes where chamado_id = pg_temp.ch2()), true);
+reset role;
+set role service_role;
+select pg_temp.checa((select e->'contribuintes' from jsonb_array_elements(chamados.notion_lote(pg_temp.v('seg'))->'itens') e
+  where e->>'protocolo' = pg_temp.v('p2')) = '["ALDO"]'::jsonb, 'ajuda aceita aparece no Notion');
+reset role;
+
 update chamados.configuracao set valor = 'false' where chave = 'notion_ativo';
 \echo CONTRIBUINTES: TODOS OS TESTES PASSARAM
