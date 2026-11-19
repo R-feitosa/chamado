@@ -18,6 +18,11 @@ describe('propriedades', () => {
     expect(p.Status).toEqual({ status: { name: 'Em andamento' } })
     expect(p.Tarefa.title[0].text.content).toBe('TI-0450 · CRM · Tela não abre')
   })
+  it('leva os contribuintes (vazio quando não há)', () => {
+    expect((propriedades({ ...base, contribuintes: ['ALDO', 'RUAN'] }, false) as Record<string, any>).Contribuintes)
+      .toEqual({ multi_select: [{ name: 'ALDO' }, { name: 'RUAN' }] })
+    expect((propriedades(base, false) as Record<string, any>).Contribuintes).toEqual({ multi_select: [] })
+  })
   it('atualização não mexe em Tipo/Abertura e limpa o responsável ao desassumir', () => {
     const p = propriedades({ ...base, responsavel: null, status: 'A fazer' }, false) as Record<string, any>
     expect(p.Tipo).toBeUndefined()

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { agir, desassumir, justificarAtraso, listarColaboracoes, MOTIVOS_REABERTURA, pedirAjuda, reabrir, responderAjuda, type Acao, type Colaboracao, type MotivoReabertura } from '../lib/api';
+import { adicionarContribuinte, agir, desassumir, justificarAtraso, listarColaboracoes, MOTIVOS_REABERTURA, reabrir, removerContribuinte, responderAjuda, type Acao, type Colaboracao, type MotivoReabertura } from '../lib/api';
 import { FILTROS, indicadores, noFiltro, ordenar, quemAbriu, type Filtro } from '../lib/fila';
 import { duracao, inicioDoPeriodo, resolvidosNoPeriodo, tempoDaFila, temposMedios } from '../lib/analytics';
 import { formatoPct, situacaoPrazo, taxaAssumidoNoPrazo, taxaNoPrazo, textoPrazo } from '../lib/sla';
@@ -14,17 +14,70 @@ import { supabase } from '../lib/supabase';
 
 interface Props { eu: Pessoa; catalogo: Catalogo; chamados: Chamado[]; onAcao?: () => void; gestor?: boolean }
 
-type Dialogo = { tipo: 'reabrir' | 'ajuda' | 'justificar' | 'desassumir'; c: Chamado } | null;
+type Dialogo = { tipo: 'reabrir' | 'contribuintes' | 'justificar' | 'desassumir'; c: Chamado } | null;
+type DialogoForm = { tipo: 'reabrir' | 'justificar' | 'desassumir'; c: Chamado };
 
-/** Diálogos do Painel: reabrir com motivo, pedir ajuda a um colega, justificar atraso e desassumir. */
-function Dialogos({ d, eu, devs, onFechar, onFeito }: { d: NonNullable<Dialogo>; eu: Pessoa; devs: Pessoa[]; onFechar: () => void; onFeito: () => void }) {
+/** Contribuintes do chamado: até 3 pessoas (responsável + 2). O responsável e o gestor adicionam e removem; quem contribui pode sair. */
+function DialogoContribuintes({ c, eu, gestor, devs, colabs, pessoa, onFechar, onMudou }: {
+  c: Chamado; eu: Pessoa; gestor: boolean; devs: Pessoa[]; colabs: Colaboracao[]; pessoa: Map<string, Pessoa>; onFechar: () => void; onMudou: () => void;
+}) {
+  const [colega, setColega] = useState('');
+  const [ocupado, setOcupado] = useState(false);
+  const [erro, setErro] = useState('');
+  useEffect(() => { const esc = (e: KeyboardEvent) => e.key === 'Escape' && onFechar(); window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc); }, [onFechar]);
+  const atuais = colabs.filter((x) => x.chamado_id === c.id && x.status === 'confirmada');
+  const pode = c.responsavel_id === eu.id || gestor;
+  const livres = devs.filter((p) => p.id !== c.responsavel_id && !atuais.some((x) => x.ajudante_id === p.id));
+  async function rodar(f: () => Promise<void>) {
+    setOcupado(true); setErro('');
+    try { await f(); setColega(''); onMudou(); } catch (e) { setErro(mensagemErro(e)); } finally { setOcupado(false); }
+  }
+  return (
+    <div className="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-c" onClick={(e) => e.target === e.currentTarget && onFechar()}>
+      <div className="card">
+        <h2 id="dlg-c">Contribuintes <span className="mono muted" style={{ fontSize: 14 }}>{c.protocolo}</span></h2>
+        <p className="muted" style={{ margin: '0 0 12px' }}>Até 3 pessoas no chamado: o responsável e mais 2. Quem contribui escreve no chat e ganha o XP de ajuda
+          quando o chamado é validado. A tarefa no Notion é atualizada sozinha.</p>
+        <ul className="contrib">
+          <li><span className="av">{iniciais(pessoa.get(c.responsavel_id ?? '')?.nome ?? '?')}</span>
+            <span><b>{pessoa.get(c.responsavel_id ?? '')?.nome ?? '—'}</b><small>Responsável</small></span></li>
+          {atuais.map((x) => {
+            const p = pessoa.get(x.ajudante_id);
+            const sou = x.ajudante_id === eu.id;
+            return (
+              <li key={x.id}><span className="av">{iniciais(p?.nome ?? '?')}</span>
+                <span><b>{p?.nome ?? '—'}</b><small>Contribuinte</small></span>
+                {(pode || sou) && <button type="button" className="mini" disabled={ocupado}
+                  onClick={() => void rodar(() => removerContribuinte(c.id, x.ajudante_id))}>{sou && !pode ? 'Sair' : 'Remover'}</button>}
+              </li>
+            );
+          })}
+        </ul>
+        {pode && (atuais.length < 2 ? (
+          <div className="contrib-add">
+            <select className="field" value={colega} onChange={(e) => setColega(e.target.value)} aria-label="Colega para adicionar">
+              <option value="">Escolha um colega</option>
+              {livres.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+            </select>
+            <button type="button" className="btn pri" disabled={!colega || ocupado} onClick={() => void rodar(() => adicionarContribuinte(c.id, colega))}>
+              {ocupado ? 'Salvando…' : 'Adicionar'}</button>
+          </div>
+        ) : <small className="muted">Limite de 3 pessoas atingido.</small>)}
+        {erro && <p className="erro" role="alert">{erro}</p>}
+        <div className="acoes"><button type="button" className="btn sec" onClick={onFechar}>Fechar</button></div>
+      </div>
+    </div>
+  );
+}
+
+/** Diálogos do Painel: reabrir com motivo, justificar atraso e desassumir. */
+function Dialogos({ d, onFechar, onFeito }: { d: DialogoForm; onFechar: () => void; onFeito: () => void }) {
   const [motivo, setMotivo] = useState<MotivoReabertura | ''>('');
   const [texto, setTexto] = useState('');
-  const [colega, setColega] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
   useEffect(() => { const esc = (e: KeyboardEvent) => e.key === 'Escape' && onFechar(); window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc); }, [onFechar]);
-  const pronto = d.tipo === 'reabrir' ? !!motivo && (motivo !== 'outro' || texto.trim().length >= 5) : d.tipo === 'ajuda' ? !!colega
+  const pronto = d.tipo === 'reabrir' ? !!motivo && (motivo !== 'outro' || texto.trim().length >= 5) 
     : d.tipo === 'desassumir' ? true : texto.trim().length >= 5;
   async function enviar(e: FormEvent) {
     e.preventDefault();
@@ -32,14 +85,13 @@ function Dialogos({ d, eu, devs, onFechar, onFeito }: { d: NonNullable<Dialogo>;
     setEnviando(true); setErro('');
     try {
       if (d.tipo === 'reabrir') await reabrir(d.c.id, motivo as MotivoReabertura, texto);
-      else if (d.tipo === 'ajuda') await pedirAjuda(d.c.id, colega);
       else if (d.tipo === 'desassumir') await desassumir(d.c.id, texto);
       else await justificarAtraso(d.c.id, texto);
       onFeito();
     } catch (err) { setErro(mensagemErro(err)); } finally { setEnviando(false); }
   }
-  const titulos = { reabrir: 'Reabrir chamado', ajuda: 'Pedir ajuda a um colega', justificar: 'Justificar atraso', desassumir: 'Desassumir chamado' };
-  const botoes = { reabrir: 'Reabrir', ajuda: 'Pedir ajuda', justificar: 'Salvar justificativa', desassumir: 'Desassumir' };
+  const titulos = { reabrir: 'Reabrir chamado', justificar: 'Justificar atraso', desassumir: 'Desassumir chamado' };
+  const botoes = { reabrir: 'Reabrir', justificar: 'Salvar justificativa', desassumir: 'Desassumir' };
   return (
     <div className="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-t" onClick={(e) => e.target === e.currentTarget && onFechar()}>
       <form className="card" onSubmit={enviar}>
@@ -52,27 +104,16 @@ function Dialogos({ d, eu, devs, onFechar, onFeito }: { d: NonNullable<Dialogo>;
             ))}
           </div>
         )}
-        {d.tipo === 'ajuda' && (
-          <label className="grp"><span className="lbl">Quem vai ajudar?</span>
-            <select className="field" value={colega} onChange={(e) => setColega(e.target.value)} required>
-              <option value="">Escolha um colega</option>
-              {devs.filter((p) => p.id !== eu.id).map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-            </select>
-            <small className="muted">O colega confirma no próprio painel. A ajuda conta quando o chamado for resolvido e validado.</small>
-          </label>
-        )}
         {d.tipo === 'desassumir' && (
           <p className="muted" style={{ margin: '0 0 12px' }}>O chamado volta para a fila sem responsável, com os mesmos prazos. Pedidos de ajuda sem resposta são cancelados
             e o XP de resposta rápida ainda em validação é estornado.</p>
         )}
-        {(d.tipo !== 'ajuda') && (
-          <label className="grp"><span className="lbl">{d.tipo === 'justificar' ? 'O que causou o atraso?' : d.tipo === 'desassumir' ? 'Motivo (opcional)'
+        <label className="grp"><span className="lbl">{d.tipo === 'justificar' ? 'O que causou o atraso?' : d.tipo === 'desassumir' ? 'Motivo (opcional)'
             : `Detalhes${motivo === 'outro' ? ' (obrigatório)' : ' (opcional)'}`}</span>
             <textarea className="field" rows={3} maxLength={d.tipo === 'justificar' ? 500 : 300} value={texto} onChange={(e) => setTexto(e.target.value)}
               placeholder={d.tipo === 'justificar' ? 'Ex.: dependia do fornecedor; aguardando o solicitante.' : d.tipo === 'desassumir' ? 'Ex.: vou ficar fora; é de outra área.' : ''} />
             {d.tipo === 'justificar' && <small className="muted">Atraso justificado até a validação do chamado não gera penalidade.</small>}
-          </label>
-        )}
+        </label>
         {erro && <p className="erro" role="alert">{erro}</p>}
         <div className="acoes">
           <button type="button" className="btn sec" onClick={onFechar}>Cancelar</button>
@@ -222,7 +263,7 @@ export function Painel({ eu, catalogo, chamados, onAcao, gestor = false }: Props
                   {sol.nome}{sol.cargo ? ` · ${sol.cargo}` : ''}{sol.setor ? ` · ${sol.setor}` : ''}
                 </div>
                 {colabs.some((x) => x.chamado_id === c.id && x.status !== 'recusada') && (
-                  <div className="sub">Com ajuda de {colabs.filter((x) => x.chamado_id === c.id && x.status !== 'recusada')
+                  <div className="sub">Contribuintes: {colabs.filter((x) => x.chamado_id === c.id && x.status !== 'recusada')
                     .map((x) => `${pessoa.get(x.ajudante_id)?.nome.split(' ')[0] ?? '—'}${x.status === 'pedida' ? ' (aguardando)' : ''}`).join(', ')}</div>
                 )}
                 {c.justificativa_atraso && <div className="sub" title={c.justificativa_atraso}>Atraso justificado</div>}
@@ -248,7 +289,10 @@ export function Painel({ eu, catalogo, chamados, onAcao, gestor = false }: Props
                     </div>
                     {res && !gestor && <button className="mini" type="button" disabled={bloqueado} onClick={() => setDialogo({ tipo: 'reabrir', c })}>Reabrir</button>}
                     {!res && resp.id === eu.id && <button className="mini" type="button" disabled={bloqueado} onClick={() => executar('resolver', c.id)}>Resolver</button>}
-                    {!res && resp.id === eu.id && <button className="mini" type="button" title="Pedir ajuda a um colega" aria-label="Pedir ajuda" onClick={() => setDialogo({ tipo: 'ajuda', c })}>Ajuda</button>}
+                    {!res && (resp.id === eu.id || gestor || colabs.some((x) => x.chamado_id === c.id && x.ajudante_id === eu.id && x.status === 'confirmada')) && (
+                      <button className="mini" type="button" title="Adicionar ou remover quem trabalha junto (até 3 pessoas)" onClick={() => setDialogo({ tipo: 'contribuintes', c })}>
+                        Contribuintes{colabs.some((x) => x.chamado_id === c.id && x.status === 'confirmada') ? ` (${colabs.filter((x) => x.chamado_id === c.id && x.status === 'confirmada').length})` : ''}</button>
+                    )}
                     {!res && (resp.id === eu.id || gestor) && (
                       <button className="mini" type="button" disabled={bloqueado} title="Devolver o chamado para a fila, sem responsável" onClick={() => setDialogo({ tipo: 'desassumir', c })}>Desassumir</button>
                     )}
@@ -289,7 +333,11 @@ export function Painel({ eu, catalogo, chamados, onAcao, gestor = false }: Props
           </aside>
         </div>
       )}
-      {dialogo && <Dialogos d={dialogo} eu={eu} devs={devs} onFechar={() => setDialogo(null)} onFeito={() => { setDialogo(null); carregarColabs(); onAcao?.(); }} />}
+      {dialogo && dialogo.tipo === 'contribuintes' && (
+        <DialogoContribuintes c={chamados.find((x) => x.id === dialogo.c.id) ?? dialogo.c} eu={eu} gestor={gestor} devs={devs} colabs={colabs} pessoa={pessoa}
+          onFechar={() => setDialogo(null)} onMudou={() => { carregarColabs(); onAcao?.(); }} />
+      )}
+      {dialogo && dialogo.tipo !== 'contribuintes' && <Dialogos d={dialogo as DialogoForm} onFechar={() => setDialogo(null)} onFeito={() => { setDialogo(null); carregarColabs(); onAcao?.(); }} />}
     </section>
   );
 }

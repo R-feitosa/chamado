@@ -173,3 +173,8 @@ validação por 72 h, Performance Score composto, antiabuso com revisão do gest
 - Erros ficam em `notion_envios.erro` (até 5 tentativas, 1/min).
 - **Ligada em 19/11/2026** (`notion_ativo = true`, token salvo como segredo da função). Primeira tarefa sai no próximo chamado assumido.
 
+## 18. Contribuintes (19/11/2026)
+- Até 3 pessoas por chamado (responsável + 2). Migration `20261119140000_contribuintes.sql` (`adicionar_contribuinte`, `remover_contribuinte`, `notion_enfileirar`, gatilho `notion_contribuintes` em `colaboracoes`, `notion_item` com `contribuintes`). Testes: `supabase/testes/contribuintes.sql`.
+- Notion: coluna "Contribuintes" (multi-seleção, mesmas opções de "Responsável") criada na base; abas ÉSAU/ALDO/RUAN/BRENNO AZEVEDO/BRENO MAGALHÃES/JOTINHA/KAIO filtram "Responsável = X OU Contribuintes contém X"; "Todas as tarefas" mostra a coluna. Edge Function `chamados-notion` envia a coluna.
+- Painel: botão "Contribuintes (n)" para responsável, gestor e quem contribui; a linha mostra "Contribuintes: …".
+

@@ -45,6 +45,7 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
   (Tipo "Chamado", Responsável = quem assumiu via `pessoas.notion_responsavel`, Status "Em andamento", prioridade pela urgência
   3→P0 … 0→P3, sistema, solicitante, abertura, prazo, link e a descrição no corpo; prints não vão). Depois acompanha:
   resolver → "Concluída" + Conclusão; reabrir → "Em andamento"; desassumir → "A fazer" sem responsável; outro assume → troca o Responsável.
+  Contribuintes vão para a coluna "Contribuintes" (multi-seleção); as abas por pessoa mostram Responsável = X **ou** Contribuintes contém X.
   Só chamados assumidos depois de ligar (`configuracao.notion_ativo`). Motor: gatilho `notion_sync` em `eventos` → fila `notion_envios`
   → `notion_disparar()` (pg_net; retentativa no `push_agendar`) → Edge Function `chamados-notion` (token só no segredo `NOTION_TOKEN` da função).
   O Painel mostra "Notion ↗" na linha do chamado.
@@ -131,5 +132,5 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
 ### Fluxo
 - Solicitante não faz login: informa setor, nome e cargo (obrigatórios, conferidos pelo banco), abre pelo formulário e acompanha pelo protocolo. Dev/suporte faz login e vê todos os chamados.
 - Assumir: dev, chamado sem responsável e não resolvido (grava `assumido_em`, base do "tempo até assumir"). Resolver: só o responsável. Desassumir: o responsável ou o gestor, motivo opcional; volta para "aberto" sem responsável e com os mesmos prazos, cancela pedidos de ajuda sem resposta e estorna o XP de resposta rápida ainda em validação (evento `desassumido`, ignorado pelo motor da gamificação). Reabrir: qualquer dev, **com motivo**; volta para "em andamento" com o mesmo responsável.
-- Pedir ajuda: só o responsável, chamado em andamento; o colega aceita ou recusa. Justificar atraso: só o responsável, com o prazo de resolver vencido.
+- **Contribuintes** (botão "Contribuintes" no Painel): até 3 pessoas no chamado (responsável + 2). O responsável ou o gestor adiciona direto, sem aceite (`adicionar_contribuinte`); remove o responsável, o gestor ou o próprio contribuinte (`remover_contribuinte`). Usa `colaboracoes` (status `confirmada`): contribuinte escreve no chat e ganha o XP de ajuda. O fluxo antigo (pedir ajuda + aceite) segue valendo para pedidos já feitos. Justificar atraso: só o responsável, com o prazo de resolver vencido.
 - Até 3 prints por chamado (PNG, JPG, WEBP, GIF; até 5 MB), gravados em `chamados-prints/publico/…` (sem login) ou `chamados-prints/<user_id>/…` (dev logado).

@@ -20,6 +20,8 @@ export interface Item {
   descricao: string | null
   sistema: string | null
   urgencia: string
+  /** Opções de "Contribuintes" (quem ajuda, além do responsável). */
+  contribuintes?: string[]
   envio_ids: number[]
 }
 
@@ -31,6 +33,7 @@ export function propriedades(i: Item, criar: boolean): Record<string, unknown> {
   const p: Record<string, unknown> = {
     Tarefa: { title: texto(i.titulo) },
     Responsável: { select: i.responsavel ? { name: i.responsavel } : null },
+    Contribuintes: { multi_select: (i.contribuintes ?? []).map((name) => ({ name })) },
     Status: { status: { name: i.status } },
     Prioridade: { select: { name: i.prioridade } },
     'Sistema/Projeto': { multi_select: [{ name: i.sistema_projeto }] },

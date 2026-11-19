@@ -22,3 +22,4 @@ $P -o /dev/null -f supabase/testes/notificacoes.sql
 $P -o /dev/null -f supabase/testes/chat.sql
 $P -o /dev/null -f supabase/testes/desassumir.sql
 $P -o /dev/null -f supabase/testes/notion.sql
+$P -o /dev/null -f supabase/testes/contribuintes.sql

@@ -150,8 +150,13 @@ export async function listarColaboracoes(): Promise<Colaboracao[]> {
   return (data ?? []) as Colaboracao[];
 }
 
-export async function pedirAjuda(chamado: string, ajudante: string): Promise<void> {
-  const { error } = await supabase.rpc('pedir_ajuda', { p_chamado: chamado, p_ajudante: ajudante });
+export async function adicionarContribuinte(chamado: string, pessoa: string): Promise<void> {
+  const { error } = await supabase.rpc('adicionar_contribuinte', { p_chamado: chamado, p_pessoa: pessoa });
+  if (error) throw error;
+}
+
+export async function removerContribuinte(chamado: string, pessoa: string): Promise<void> {
+  const { error } = await supabase.rpc('remover_contribuinte', { p_chamado: chamado, p_pessoa: pessoa });
   if (error) throw error;
 }
 
