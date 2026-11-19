@@ -171,4 +171,5 @@ validação por 72 h, Performance Score composto, antiabuso com revisão do gest
 - Mapeamento técnico → opção "Responsável": Aldo Júnior→ALDO, Ruan→RUAN, Brenno Azevedo→BRENNO AZEVEDO, Breno Magalhães→BRENO MAGALHÃES, João Pedro→JOTINHA, Kaio→KAIO (`pessoas.notion_responsavel`; técnico novo precisa da opção lá e do valor aqui).
 - Para ligar: integração interna no Notion com acesso à base → token no segredo `NOTION_TOKEN` da função → `update chamados.configuracao set valor = 'true' where chave = 'notion_ativo'`. Sem token a função responde 503 e a fila espera.
 - Erros ficam em `notion_envios.erro` (até 5 tentativas, 1/min).
+- **Ligada em 19/11/2026** (`notion_ativo = true`, token salvo como segredo da função). Primeira tarefa sai no próximo chamado assumido.
 
