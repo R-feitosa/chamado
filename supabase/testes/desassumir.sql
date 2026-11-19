@@ -49,7 +49,8 @@ select pg_temp.checa((pg_temp.v('r'))::jsonb->>'status' = 'aberto' and (pg_temp.
   and (pg_temp.v('r'))::jsonb->'assumido_em' = 'null'::jsonb, 'volta para a fila');
 select pg_temp.checa(((pg_temp.v('r'))::jsonb->>'xp_estornado')::int = 5, 'estornou a resposta rápida');
 select pg_temp.checa((select status from chamados.gam_xp where chamado_id = pg_temp.id() and regra_codigo = 'resposta_rapida') = 'estornado', 'ledger estornado');
-select pg_temp.checa((select status::text from chamados.colaboracoes where chamado_id = pg_temp.id()) = 'recusada', 'pedido de ajuda cancelado');
+-- "Ajuda" agora entra direto como contribuinte: quem já está no chamado continua nele.
+select pg_temp.checa((select status::text from chamados.colaboracoes where chamado_id = pg_temp.id()) = 'confirmada', 'contribuinte continua');
 select pg_temp.checa((select detalhe->>'motivo' from chamados.eventos where chamado_id = pg_temp.id() and acao = 'desassumido') = 'Vou ficar fora amanhã', 'motivo no histórico');
 select pg_temp.checa((select prazo_assumir_em from chamados.chamados where id = pg_temp.id()) is not null, 'prazo mantido');
 

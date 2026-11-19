@@ -101,14 +101,21 @@ select chamados.notion_confirmar(pg_temp.v('seg'), jsonb_build_array(jsonb_build
   'page_id', 'pagina-ajuda', 'envio_ids', (select e->'envio_ids' from jsonb_array_elements((pg_temp.v('l2'))::jsonb->'itens') e where e->>'protocolo' = pg_temp.v('p2')))));
 reset role;
 set role authenticated; select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+-- "Ajuda" entra direto, sem aceite: já é contribuinte e já vai para o Notion.
 select chamados.pedir_ajuda(pg_temp.ch2(), pg_temp.pid('Aldo Júnior'));
-select pg_temp.como('00000000-0000-0000-0000-00000000000c');
-select chamados.responder_ajuda((select id from chamados.colaboracoes where chamado_id = pg_temp.ch2()), true);
+select pg_temp.falha(format('select chamados.pedir_ajuda(%L, %L)', pg_temp.ch2(), pg_temp.pid('Aldo Júnior')), 'já é contribuinte');
 reset role;
+select pg_temp.checa((select status::text from chamados.colaboracoes where chamado_id = pg_temp.ch2()) = 'confirmada', 'ajuda sem aceite');
 set role service_role;
 select pg_temp.checa((select e->'contribuintes' from jsonb_array_elements(chamados.notion_lote(pg_temp.v('seg'))->'itens') e
-  where e->>'protocolo' = pg_temp.v('p2')) = '["ALDO"]'::jsonb, 'ajuda aceita aparece no Notion');
+  where e->>'protocolo' = pg_temp.v('p2')) = '["ALDO"]'::jsonb, 'ajuda aparece no Notion sem aceite');
 reset role;
+-- Tela antiga: "Vou ajudar" não quebra; "Recusar" = sair do chamado.
+set role authenticated; select pg_temp.como('00000000-0000-0000-0000-00000000000c');
+select chamados.responder_ajuda((select id from chamados.colaboracoes where chamado_id = pg_temp.ch2()), true);
+select chamados.responder_ajuda((select id from chamados.colaboracoes where chamado_id = pg_temp.ch2()), false);
+reset role;
+select pg_temp.checa((select status::text from chamados.colaboracoes where chamado_id = pg_temp.ch2()) = 'recusada', 'recusar = sair');
 
 update chamados.configuracao set valor = 'false' where chave = 'notion_ativo';
 \echo CONTRIBUINTES: TODOS OS TESTES PASSARAM
