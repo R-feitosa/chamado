@@ -1,0 +1,92 @@
+// Edge Function chamados-notion — leva os chamados assumidos para a base "Acompanhamento de Tarefas · P&D" do Notion.
+//
+// Quem decide QUANDO sincronizar é o banco (gatilho em chamados.eventos + retentativa no agendador do push);
+// esta função lê a fila (notion_lote), cria ou atualiza a página no Notion e confirma (notion_confirmar).
+// Chamada pelo pg_net com o segredo de despacho do Vault no cabeçalho `x-chamados-notion-secret` — por isso
+// verify_jwt=false: a autenticação é esse segredo, conferido pelos próprios RPCs (que só aceitam service_role).
+// O token da integração do Notion fica só no segredo NOTION_TOKEN desta função (painel do Supabase).
+import { blocos, propriedades, type Item } from './notion.ts'
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const NOTION = 'https://api.notion.com/v1'
+const NOTION_VERSION = '2022-06-28'
+
+async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: {
+      apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json',
+      'Content-Profile': 'chamados', 'Accept-Profile': 'chamados',
+    },
+    body: JSON.stringify(args),
+  })
+  const text = await res.text()
+  if (!res.ok) throw new Error(`${fn}: ${res.status} ${text.slice(0, 300)}`)
+  return (text ? JSON.parse(text) : null) as T
+}
+
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+}
+
+async function notion(token: string, method: string, path: string, body: unknown) {
+  const res = await fetch(`${NOTION}${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, 'Notion-Version': NOTION_VERSION, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const text = await res.text()
+  let data: Record<string, unknown> = {}
+  try { data = text ? JSON.parse(text) : {} } catch { /* resposta não JSON */ }
+  return { status: res.status, data, text }
+}
+
+const espera = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+async function sincronizar(token: string, databaseId: string, i: Item): Promise<{ ok: boolean; page_id?: string; erro?: string }> {
+  if (i.page_id) {
+    const r = await notion(token, 'PATCH', `/pages/${i.page_id}`, { properties: propriedades(i, false) })
+    if (r.status === 200) return { ok: true, page_id: i.page_id }
+    // Página apagada/arquivada no Notion ou sem acesso: cria de novo.
+    if (!(r.status === 404 || (r.status === 400 && /archiv/i.test(r.text)))) return { ok: false, erro: `${r.status}: ${r.text.slice(0, 300)}` }
+  }
+  const r = await notion(token, 'POST', '/pages', {
+    parent: { database_id: databaseId },
+    icon: { type: 'emoji', emoji: '🎫' },
+    properties: propriedades(i, true),
+    children: blocos(i),
+  })
+  if (r.status === 200 && typeof r.data.id === 'string') return { ok: true, page_id: r.data.id as string }
+  return { ok: false, erro: `${r.status}: ${r.text.slice(0, 300)}` }
+}
+
+Deno.serve(async (req) => {
+  if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405)
+  const segredo = req.headers.get('x-chamados-notion-secret')
+  if (!segredo) return json({ error: 'unauthorized' }, 401)
+  const token = Deno.env.get('NOTION_TOKEN')
+  // Sem token não reserva nada: a fila espera até o segredo ser configurado.
+  if (!token) return json({ error: 'NOTION_TOKEN não configurado' }, 503)
+
+  let lote: { database_id: string; itens: Item[] }
+  try {
+    lote = await rpc('notion_lote', { p_segredo: segredo })
+  } catch (err) {
+    const msg = String(err)
+    if (/42501|Segredo/.test(msg)) return json({ error: 'unauthorized' }, 401)
+    console.error(msg)
+    return json({ error: 'lote_indisponivel' }, 500)
+  }
+
+  const resultados: Record<string, unknown>[] = []
+  for (const item of lote.itens) {
+    let r: { ok: boolean; page_id?: string; erro?: string }
+    try { r = await sincronizar(token, lote.database_id, item) } catch (err) { r = { ok: false, erro: String(err).slice(0, 300) } }
+    if (!r.ok) console.error(`notion ${item.protocolo}: ${r.erro}`)
+    resultados.push({ chamado_id: item.chamado_id, envio_ids: item.envio_ids, ...r })
+    await espera(350) // limite da API do Notion: ~3 chamadas por segundo
+  }
+  if (resultados.length) await rpc('notion_confirmar', { p_segredo: segredo, p_resultados: resultados })
+  return json({ itens: resultados.length, ok: resultados.filter((r) => r.ok).length })
+})

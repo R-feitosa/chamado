@@ -268,6 +268,10 @@ export function Painel({ eu, catalogo, chamados, onAcao, gestor = false }: Props
                     </button>
                   );
                 })()}
+                {c.notion_page_id && (
+                  <a className="mini notion" href={`https://www.notion.so/${c.notion_page_id.replace(/-/g, '')}`} target="_blank" rel="noreferrer"
+                    title="Abrir a tarefa no Notion (Acompanhamento de Tarefas · P&D)">Notion ↗</a>
+                )}
               </div>
             </div>
           );

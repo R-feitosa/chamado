@@ -23,6 +23,8 @@ export interface Chamado {
   setor_outro?: string | null;
   sistema_id: number;
   urgencia: Urgencia;
+  /** Página da tarefa no Notion (integração Central → Notion), quando já criada. */
+  notion_page_id?: string | null;
   status: Status;
   responsavel_id: string | null;
   assumido_em: string | null;

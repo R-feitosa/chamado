@@ -164,3 +164,11 @@ validação por 72 h, Performance Score composto, antiabuso com revisão do gest
 ## 16. Nomes (09/10/2026)
 - Grafia correta: **Brenno Azevedo** (igual ao hub) e **Breno Magalhães** (`20261009120000_nomes_brenos.sql`). Nas seções antigas acima, "Breno Azevedo" = Brenno Azevedo e "Brenno Magalhães" = Breno Magalhães.
 - 22/10/2026: "Aldo" passa a se chamar **Aldo Júnior** (`20261022120000_nome_aldo.sql`); login continua o corporativo.
+
+## 17. Integração com o Notion (19/11/2026)
+- Base: "Acompanhamento de Tarefas · P&D" (`configuracao.notion_database_id` = 41d4ea8cd78c816085c4f72cce41562e). Caminho Balanceado: só Central → Notion.
+- Migration `20261119120000_notion.sql`; Edge Function `chamados-notion` (verify_jwt=false; segredo `x-chamados-notion-secret` do Vault); testes `supabase/testes/notion.sql` e `supabase/functions/chamados-notion/notion.test.ts`.
+- Mapeamento técnico → opção "Responsável": Aldo Júnior→ALDO, Ruan→RUAN, Brenno Azevedo→BRENNO AZEVEDO, Breno Magalhães→BRENO MAGALHÃES, João Pedro→JOTINHA, Kaio→KAIO (`pessoas.notion_responsavel`; técnico novo precisa da opção lá e do valor aqui).
+- Para ligar: integração interna no Notion com acesso à base → token no segredo `NOTION_TOKEN` da função → `update chamados.configuracao set valor = 'true' where chave = 'notion_ativo'`. Sem token a função responde 503 e a fila espera.
+- Erros ficam em `notion_envios.erro` (até 5 tentativas, 1/min).
+

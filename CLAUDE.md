@@ -41,6 +41,13 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
   Escrevem o responsável e quem aceitou ajudar (antes de alguém assumir, qualquer dev); gestor e demais só leem. Fecha ao resolver (só leitura),
   o **texto é apagado 24 h depois** (`texto` nulo + `apagada_em`, nada é deletado) e reabrir reabre. Mensagem de quem abriu → push `chat`
   (sem o texto) para o responsável + ajudantes ou, sem responsável, para o time. Aviso fixo: não enviar senhas nem dados pessoais.
+- **Integração com o Notion** (Central → Notion, base "Acompanhamento de Tarefas · P&D"): ao **assumir**, cria a tarefa
+  (Tipo "Chamado", Responsável = quem assumiu via `pessoas.notion_responsavel`, Status "Em andamento", prioridade pela urgência
+  3→P0 … 0→P3, sistema, solicitante, abertura, prazo, link e a descrição no corpo; prints não vão). Depois acompanha:
+  resolver → "Concluída" + Conclusão; reabrir → "Em andamento"; desassumir → "A fazer" sem responsável; outro assume → troca o Responsável.
+  Só chamados assumidos depois de ligar (`configuracao.notion_ativo`). Motor: gatilho `notion_sync` em `eventos` → fila `notion_envios`
+  → `notion_disparar()` (pg_net; retentativa no `push_agendar`) → Edge Function `chamados-notion` (token só no segredo `NOTION_TOKEN` da função).
+  O Painel mostra "Notion ↗" na linha do chamado.
 - Fluxo novo usado pela gamificação: **avaliação** (1–5 estrelas + elogio) com código secreto gerado na abertura sem login (link "avaliar depois"), **pedir ajuda** a colega (o colega confirma), **justificar atraso**, **reabrir com motivo** (não estava resolvido / voltou / outro).
 
 ## Sistemas atendidos
@@ -71,7 +78,8 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
   Únicas exceções, exigidas pelo Supabase: bucket privado `chamados-prints` (+ policies em `storage.objects`
   filtradas por esse bucket), `chamados.chamados` e `chamados.chat_mensagens` na publicação `supabase_realtime` e os dois agendamentos do `pg_cron`
   (`chamados-gam-ciclo`, `chamados-gam-periodos`, em `cron.job`) que rodam o motor da gamificação; o agendamento `chamados-push`
-  (notificações) e os segredos do push no **Vault** (`chamados_push_dispatch_secret`, `chamados_push_vapid_public/private`).
+  (notificações) e os segredos do push no **Vault** (`chamados_push_dispatch_secret`, `chamados_push_vapid_public/private`)
+  e do Notion (`chamados_notion_dispatch_secret`; o token do Notion fica como segredo `NOTION_TOKEN` da Edge Function `chamados-notion`).
 - Tabelas: `setores`, `pessoas` (nome, setor, papel solicitante/dev, `gestor`, e-mail de login), `sistemas`, `chamados`, `eventos` (histórico, `detalhe`), `avaliacoes`, `colaboracoes`, `chat_mensagens`, `chat_leituras`.
 - Gamificação: tabelas `gam_*` (config, regras, multiplicadores, níveis, conquistas/tiers, missões, temporadas, recompensas, fila `gam_eventos`, ledger `gam_xp`, perfis, sequências, resultados de missão, ranking congelado, notificações, suspeitas, auditoria). Escrita só pelo motor/RPCs `gam_*`; `pg_cron` roda `gam_ciclo` (1 min) e `gam_fechar_periodos` (15 min).
 - Login (só dev/suporte): o mesmo `auth.users` dos sistemas ATLAS, ligado à pessoa pelo e-mail no primeiro acesso

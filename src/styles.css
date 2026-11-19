@@ -445,3 +445,5 @@ textarea.field.json{font-family:var(--mono);font-size:13px;min-height:120px}
 .aviso-temp-ic{font-size:24px;line-height:1.1}
 .aviso-temp b{display:block;font-size:16px;color:var(--warn);margin-bottom:3px}
 .aviso-temp span{font-size:15px;line-height:1.45}
+.mini.notion{display:inline-flex;align-items:center;text-decoration:none;color:var(--ink2)}
+.mini.notion:hover{color:var(--ink)}
