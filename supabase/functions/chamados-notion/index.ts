@@ -5,7 +5,7 @@
 // Chamada pelo pg_net com o segredo de despacho do Vault no cabeçalho `x-chamados-notion-secret` — por isso
 // verify_jwt=false: a autenticação é esse segredo, conferido pelos próprios RPCs (que só aceitam service_role).
 // O token da integração do Notion fica só no segredo NOTION_TOKEN desta função (painel do Supabase).
-import { blocos, propriedades, type Item } from './notion.ts'
+import { blocos, equipeCorrigida, propriedades, type Item } from './notion.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -61,6 +61,29 @@ async function sincronizar(token: string, databaseId: string, i: Item): Promise<
   return { ok: false, erro: `${r.status}: ${r.text.slice(0, 300)}` }
 }
 
+/**
+ * Quem escolhe Responsável/Contribuintes direto no Notion também precisa aparecer na coluna de cada pessoa:
+ * olha as páginas editadas nos últimos minutos e acerta a "Equipe". Roda a cada chamada (o agendador chama a cada 2 min).
+ */
+async function acertarEquipe(token: string, databaseId: string): Promise<number> {
+  const desde = new Date(Date.now() - 6 * 60 * 1000).toISOString()
+  const q = await notion(token, 'POST', `/databases/${databaseId}/query`, {
+    filter: { timestamp: 'last_edited_time', last_edited_time: { on_or_after: desde } },
+    page_size: 50,
+  })
+  if (q.status !== 200) { console.error(`equipe: consulta ${q.status}: ${q.text.slice(0, 200)}`); return 0 }
+  let n = 0
+  for (const pg of (q.data.results as { id: string; properties: Record<string, never> }[] | undefined) ?? []) {
+    const alvo = equipeCorrigida(pg.properties)
+    if (!alvo) continue
+    const r = await notion(token, 'PATCH', `/pages/${pg.id}`, { properties: { Equipe: { multi_select: alvo.map((name) => ({ name })) } } })
+    if (r.status === 200) n++
+    else console.error(`equipe ${pg.id}: ${r.status}: ${r.text.slice(0, 200)}`)
+    await espera(350)
+  }
+  return n
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405)
   const segredo = req.headers.get('x-chamados-notion-secret')
@@ -88,5 +111,7 @@ Deno.serve(async (req) => {
     await espera(350) // limite da API do Notion: ~3 chamadas por segundo
   }
   if (resultados.length) await rpc('notion_confirmar', { p_segredo: segredo, p_resultados: resultados })
-  return json({ itens: resultados.length, ok: resultados.filter((r) => r.ok).length })
+  let equipe = 0
+  try { equipe = await acertarEquipe(token, lote.database_id) } catch (err) { console.error(`equipe: ${String(err).slice(0, 200)}`) }
+  return json({ itens: resultados.length, ok: resultados.filter((r) => r.ok).length, equipe })
 })

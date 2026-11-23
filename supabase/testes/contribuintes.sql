@@ -117,5 +117,8 @@ select chamados.responder_ajuda((select id from chamados.colaboracoes where cham
 reset role;
 select pg_temp.checa((select status::text from chamados.colaboracoes where chamado_id = pg_temp.ch2()) = 'recusada', 'recusar = sair');
 
+-- 8. Agendador chama o Notion a cada 2 min mesmo sem fila (acerta a "Equipe" editada direto no Notion).
+select pg_temp.checa(position('% 2 = 0 or exists' in pg_get_functiondef('chamados.push_agendar()'::regprocedure)) > 0, 'agendador chama o Notion a cada 2 min');
+select chamados.push_agendar();
 update chamados.configuracao set valor = 'false' where chave = 'notion_ativo';
 \echo CONTRIBUINTES: TODOS OS TESTES PASSARAM

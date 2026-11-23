@@ -33,6 +33,20 @@ export function equipe(i: Item): string[] {
   return [...new Set([i.responsavel, ...(i.contribuintes ?? [])].filter((n): n is string => !!n))]
 }
 
+type Props = Record<string, { select?: { name: string } | null; multi_select?: { name: string }[] } | undefined>
+
+/**
+ * Página editada à mão no Notion: "Equipe" tem que ser Responsável + Contribuintes (é ela que põe o cartão na
+ * coluna de cada pessoa no quadro da equipe). Devolve a Equipe certa, ou null se já está certa (ou não há ninguém).
+ */
+export function equipeCorrigida(props: Props): string[] | null {
+  const nomes = (k: string) => (props[k]?.multi_select ?? []).map((o) => o.name)
+  const alvo = [...new Set([props['Responsável']?.select?.name ?? null, ...nomes('Contribuintes')].filter((n): n is string => !!n))]
+  if (!alvo.length) return null
+  const atual = new Set(nomes('Equipe'))
+  return atual.size === alvo.length && alvo.every((n) => atual.has(n)) ? null : alvo
+}
+
 /** Propriedades da base "Acompanhamento de Tarefas · P&D". Na criação também vão Tipo e Abertura. */
 export function propriedades(i: Item, criar: boolean): Record<string, unknown> {
   const p: Record<string, unknown> = {

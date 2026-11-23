@@ -46,7 +46,7 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
   3→P0 … 0→P3, sistema, solicitante, abertura, prazo, link e a descrição no corpo; prints não vão). Depois acompanha:
   resolver → "Concluída" + Conclusão; reabrir → "Em andamento"; desassumir → "A fazer" sem responsável; outro assume → troca o Responsável.
   Contribuintes vão para a coluna "Contribuintes" (multi-seleção); as abas por pessoa mostram Responsável = X **ou** Contribuintes contém X.
-  A coluna "Equipe" (multi-seleção = responsável + contribuintes, preenchida pela Central) agrupa o quadro "Equipe · por pessoa": o cartão aparece na coluna de cada um. Quadros mostram só o que está aberto; o concluído fica na aba "✅ Concluídas".
+  A coluna "Equipe" (multi-seleção = responsável + contribuintes, preenchida pela Central e acertada a cada 2 min quando alguém muda as pessoas direto no Notion) agrupa o quadro "Equipe · por pessoa": o cartão aparece na coluna de cada um. Quadros mostram só o que está aberto; o concluído fica na aba "✅ Concluídas".
   Só chamados assumidos depois de ligar (`configuracao.notion_ativo`). Motor: gatilho `notion_sync` em `eventos` → fila `notion_envios`
   → `notion_disparar()` (pg_net; retentativa no `push_agendar`) → Edge Function `chamados-notion` (token só no segredo `NOTION_TOKEN` da função).
   O Painel mostra "Notion ↗" na linha do chamado.

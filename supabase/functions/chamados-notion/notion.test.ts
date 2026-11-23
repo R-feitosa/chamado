@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blocos, pedacos, propriedades, type Item } from './notion'
+import { blocos, equipeCorrigida, pedacos, propriedades, type Item } from './notion'
 
 const base: Item = {
   chamado_id: 'c1', page_id: null, protocolo: 'TI-0450', titulo: 'TI-0450 · CRM · Tela não abre', status: 'Em andamento',
@@ -54,5 +54,22 @@ describe('blocos e pedaços', () => {
     const p = pedacos('palavra '.repeat(1000))
     expect(p.length).toBeGreaterThan(3)
     expect(Math.max(...p.map((x) => x.length))).toBeLessThanOrEqual(1900)
+  })
+})
+
+describe('equipeCorrigida (edição feita direto no Notion)', () => {
+  const ms = (...n: string[]) => ({ multi_select: n.map((name) => ({ name })) })
+  it('responsável + contribuintes escolhidos no Notion entram na Equipe', () => {
+    expect(equipeCorrigida({ Responsável: { select: { name: 'ALDO' } }, Contribuintes: ms('RUAN', 'ÉSAU'), Equipe: ms('ALDO') }))
+      .toEqual(['ALDO', 'RUAN', 'ÉSAU'])
+  })
+  it('nada a fazer quando já está certa (em qualquer ordem)', () => {
+    expect(equipeCorrigida({ Responsável: { select: { name: 'ALDO' } }, Contribuintes: ms('RUAN'), Equipe: ms('RUAN', 'ALDO') })).toBeNull()
+  })
+  it('tirar um contribuinte tira da Equipe', () => {
+    expect(equipeCorrigida({ Responsável: { select: { name: 'ALDO' } }, Contribuintes: ms(), Equipe: ms('ALDO', 'RUAN') })).toEqual(['ALDO'])
+  })
+  it('sem responsável nem contribuintes, não mexe', () => {
+    expect(equipeCorrigida({ Responsável: { select: null }, Contribuintes: ms(), Equipe: ms('KAIO') })).toBeNull()
   })
 })
