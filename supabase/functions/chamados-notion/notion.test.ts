@@ -23,6 +23,13 @@ describe('propriedades', () => {
       .toEqual({ multi_select: [{ name: 'ALDO' }, { name: 'RUAN' }] })
     expect((propriedades(base, false) as Record<string, any>).Contribuintes).toEqual({ multi_select: [] })
   })
+  it('Equipe junta responsável e contribuintes, sem repetir; sem responsável fica só quem contribui', () => {
+    expect((propriedades({ ...base, contribuintes: ['ALDO', 'KAIO', 'ÉSAU'] }, false) as Record<string, any>).Equipe)
+      .toEqual({ multi_select: [{ name: 'KAIO' }, { name: 'ALDO' }, { name: 'ÉSAU' }] })
+    expect((propriedades({ ...base, responsavel: null, contribuintes: ['ALDO'] }, false) as Record<string, any>).Equipe)
+      .toEqual({ multi_select: [{ name: 'ALDO' }] })
+    expect((propriedades(base, false) as Record<string, any>).Equipe).toEqual({ multi_select: [{ name: 'KAIO' }] })
+  })
   it('atualização não mexe em Tipo/Abertura e limpa o responsável ao desassumir', () => {
     const p = propriedades({ ...base, responsavel: null, status: 'A fazer' }, false) as Record<string, any>
     expect(p.Tipo).toBeUndefined()

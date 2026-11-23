@@ -28,12 +28,18 @@ export interface Item {
 const texto = (t: string | null | undefined) => (t ? [{ type: 'text', text: { content: t.slice(0, 2000) } }] : [])
 const data = (iso: string | null | undefined) => (iso ? { start: iso } : null)
 
+/** Todos na tarefa (responsável + contribuintes, sem repetir): o quadro da equipe agrupa por "Equipe". */
+export function equipe(i: Item): string[] {
+  return [...new Set([i.responsavel, ...(i.contribuintes ?? [])].filter((n): n is string => !!n))]
+}
+
 /** Propriedades da base "Acompanhamento de Tarefas · P&D". Na criação também vão Tipo e Abertura. */
 export function propriedades(i: Item, criar: boolean): Record<string, unknown> {
   const p: Record<string, unknown> = {
     Tarefa: { title: texto(i.titulo) },
     Responsável: { select: i.responsavel ? { name: i.responsavel } : null },
     Contribuintes: { multi_select: (i.contribuintes ?? []).map((name) => ({ name })) },
+    Equipe: { multi_select: equipe(i).map((name) => ({ name })) },
     Status: { status: { name: i.status } },
     Prioridade: { select: { name: i.prioridade } },
     'Sistema/Projeto': { multi_select: [{ name: i.sistema_projeto }] },
