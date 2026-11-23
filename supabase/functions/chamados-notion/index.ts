@@ -5,7 +5,7 @@
 // Chamada pelo pg_net com o segredo de despacho do Vault no cabeçalho `x-chamados-notion-secret` — por isso
 // verify_jwt=false: a autenticação é esse segredo, conferido pelos próprios RPCs (que só aceitam service_role).
 // O token da integração do Notion fica só no segredo NOTION_TOKEN desta função (painel do Supabase).
-import { blocos, equipeCorrigida, propriedades, type Item } from './notion.ts'
+import { blocos, calloutFicha, calloutHistorico, equipeCorrigida, propriedades, TITULO_FICHA, TITULO_HISTORICO, type Item } from './notion.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -34,7 +34,7 @@ async function notion(token: string, method: string, path: string, body: unknown
   const res = await fetch(`${NOTION}${path}`, {
     method,
     headers: { Authorization: `Bearer ${token}`, 'Notion-Version': NOTION_VERSION, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: body === undefined ? undefined : JSON.stringify(body),
   })
   const text = await res.text()
   let data: Record<string, unknown> = {}
@@ -44,10 +44,37 @@ async function notion(token: string, method: string, path: string, body: unknown
 
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+type Bloco = { id: string; type: string; callout?: { rich_text: { plain_text: string }[] } }
+const textoDoBloco = (b: Bloco) => (b.callout?.rich_text ?? []).map((t) => t.plain_text).join('')
+
+/**
+ * Reescreve a ficha e o histórico no topo de uma página que já existe. Páginas antigas têm só um callout de resumo:
+ * ele vira a ficha e o histórico entra logo abaixo. O resto da página (descrição, anotações do time) não é tocado.
+ */
+async function atualizarFicha(token: string, pageId: string, i: Item): Promise<void> {
+  const r = await notion(token, 'GET', `/blocks/${pageId}/children?page_size=20`, undefined)
+  if (r.status !== 200) { console.error(`ficha ${i.protocolo}: ${r.status}: ${r.text.slice(0, 200)}`); return }
+  const callouts = ((r.data.results as Bloco[] | undefined) ?? []).filter((b) => b.type === 'callout')
+  const ficha = callouts.find((b) => textoDoBloco(b).startsWith(TITULO_FICHA)) ?? callouts.find((b) => !textoDoBloco(b).startsWith(TITULO_HISTORICO))
+  const hist = callouts.find((b) => textoDoBloco(b).startsWith(TITULO_HISTORICO))
+  const fNovo = calloutFicha(i), hNovo = calloutHistorico(i)
+  if (ficha) await notion(token, 'PATCH', `/blocks/${ficha.id}`, { callout: fNovo.callout })
+  if (hist) await notion(token, 'PATCH', `/blocks/${hist.id}`, { callout: hNovo.callout })
+  const faltam = [...(ficha ? [] : [fNovo]), ...(hist ? [] : [hNovo])]
+  if (faltam.length) {
+    const a = await notion(token, 'PATCH', `/blocks/${pageId}/children`, { children: faltam, ...(ficha ? { after: ficha.id } : {}) })
+    if (a.status !== 200) console.error(`ficha ${i.protocolo}: ${a.status}: ${a.text.slice(0, 200)}`)
+  }
+}
+
 async function sincronizar(token: string, databaseId: string, i: Item): Promise<{ ok: boolean; page_id?: string; erro?: string }> {
   if (i.page_id) {
     const r = await notion(token, 'PATCH', `/pages/${i.page_id}`, { properties: propriedades(i, false) })
-    if (r.status === 200) return { ok: true, page_id: i.page_id }
+    if (r.status === 200) {
+      // A ficha é um extra: se falhar, a tarefa já está certa e o erro só vai para o log.
+      try { await atualizarFicha(token, i.page_id, i) } catch (err) { console.error(`ficha ${i.protocolo}: ${String(err).slice(0, 200)}`) }
+      return { ok: true, page_id: i.page_id }
+    }
     // Página apagada/arquivada no Notion ou sem acesso: cria de novo.
     if (!(r.status === 404 || (r.status === 400 && /archiv/i.test(r.text)))) return { ok: false, erro: `${r.status}: ${r.text.slice(0, 300)}` }
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blocos, equipeCorrigida, pedacos, propriedades, type Item } from './notion'
+import { blocos, equipeCorrigida, pedacos, propriedades, textoFicha, textoHistorico, TITULO_FICHA, TITULO_HISTORICO, type Item } from './notion'
 
 const base: Item = {
   chamado_id: 'c1', page_id: null, protocolo: 'TI-0450', titulo: 'TI-0450 · CRM · Tela não abre', status: 'Em andamento',
@@ -44,11 +44,12 @@ describe('propriedades', () => {
 })
 
 describe('blocos e pedaços', () => {
-  it('corpo com resumo, título e um parágrafo por bloco de texto', () => {
+  it('corpo com ficha, histórico, título e um parágrafo por bloco de texto', () => {
     const b = blocos(base) as any[]
-    expect(b[0].type).toBe('callout')
-    expect(b[1].heading_3.rich_text[0].text.content).toBe('Descrição do chamado')
-    expect(b.slice(2).map((x) => x.paragraph.rich_text[0].text.content)).toEqual(['Tela não abre', 'Desde hoje cedo.'])
+    expect(b[0].callout.icon.emoji).toBe('🎫')
+    expect(b[1].callout.icon.emoji).toBe('🕘')
+    expect(b[2].heading_3.rich_text[0].text.content).toBe('Descrição do chamado')
+    expect(b.slice(3).map((x) => x.paragraph.rich_text[0].text.content)).toEqual(['Tela não abre', 'Desde hoje cedo.'])
   })
   it('texto longo é dividido sem passar de 2000 caracteres', () => {
     const p = pedacos('palavra '.repeat(1000))
@@ -71,5 +72,35 @@ describe('equipeCorrigida (edição feita direto no Notion)', () => {
   })
   it('sem responsável nem contribuintes, não mexe', () => {
     expect(equipeCorrigida({ Responsável: { select: null }, Contribuintes: ms(), Equipe: ms('KAIO') })).toBeNull()
+  })
+})
+
+describe('ficha e histórico da página', () => {
+  const comPessoas: Item = {
+    ...base, responsavel: 'ALDO', contribuintes: ['RUAN', 'ÉSAU'],
+    ficha: [['Responsável', 'Aldo Júnior · assumiu em 23/11/2026 09:00'], ['Contribuintes', 'Ruan (desde 23/11/2026 09:05), Esaú (desde 23/11/2026 09:06)']],
+    historico: [['23/11/2026 08:50', 'Chamado aberto'], ['23/11/2026 09:00', 'Assumido por Aldo Júnior'], ['23/11/2026 09:05', 'Ruan entrou como contribuinte']],
+  }
+  const plano = (t: { text: { content: string } }[]) => t.map((x) => x.text.content).join('')
+  it('ficha começa pelo título (é assim que a função acha o bloco) e traz cada informação numa linha', () => {
+    const t = plano(textoFicha(comPessoas))
+    expect(t.startsWith(`${TITULO_FICHA} · TI-0450`)).toBe(true)
+    expect(t).toContain('Responsável: Aldo Júnior · assumiu em 23/11/2026 09:00\n')
+    expect(t).toContain('Contribuintes: Ruan (desde 23/11/2026 09:05), Esaú (desde 23/11/2026 09:06)\n')
+    expect(t.endsWith('Abrir na Central ↗')).toBe(true)
+    expect(textoFicha(comPessoas).at(-1)!.text).toEqual({ content: 'Abrir na Central ↗', link: { url: base.link } })
+  })
+  it('histórico em ordem, um evento por linha, e mensagem quando vazio', () => {
+    const t = plano(textoHistorico(comPessoas))
+    expect(t.startsWith(TITULO_HISTORICO)).toBe(true)
+    expect(t.split('\n').slice(1)).toEqual(['23/11/2026 08:50  Chamado aberto', '23/11/2026 09:00  Assumido por Aldo Júnior', '23/11/2026 09:05  Ruan entrou como contribuinte'])
+    expect(plano(textoHistorico(base))).toBe('Histórico\nSem movimentações ainda.')
+  })
+  it('histórico longo mostra os últimos 40 e cabe no limite de 100 trechos da API', () => {
+    const muitos = { ...base, historico: Array.from({ length: 70 }, (_, k) => [`d${k}`, `e${k}`] as [string, string]) }
+    const r = textoHistorico(muitos)
+    expect(r.length).toBeLessThanOrEqual(100)
+    expect(plano(r)).toContain('(últimos 40 de 70)')
+    expect(plano(r).endsWith('d69  e69')).toBe(true)
   })
 })

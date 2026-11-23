@@ -22,6 +22,10 @@ export interface Item {
   urgencia: string
   /** Opções de "Contribuintes" (quem ajuda, além do responsável). */
   contribuintes?: string[]
+  /** Ficha do chamado: pares [rótulo, valor] já formatados pelo banco. */
+  ficha?: [string, string][]
+  /** Histórico: pares [data, o que aconteceu], do mais antigo ao mais recente. */
+  historico?: [string, string][]
   envio_ids: number[]
 }
 
@@ -87,19 +91,44 @@ export function pedacos(t: string, max = 1900): string[] {
 
 const paragrafo = (t: string) => ({ object: 'block', type: 'paragraph', paragraph: { rich_text: texto(t) } })
 
-/** Corpo da página na criação: resumo do chamado e a descrição escrita por quem abriu (prints ficam só na Central). */
+type Trecho = { type: 'text'; text: { content: string; link?: { url: string } | null }; annotations?: Record<string, unknown> }
+const trecho = (t: string, a: Record<string, unknown> = {}, link?: string | null): Trecho =>
+  ({ type: 'text', text: { content: t.slice(0, 2000), ...(link ? { link: { url: link } } : {}) }, ...(Object.keys(a).length ? { annotations: a } : {}) })
+
+export const TITULO_FICHA = 'Ficha do chamado'
+export const TITULO_HISTORICO = 'Histórico'
+const MAX_HISTORICO = 40 // cada linha usa 2 trechos; a API aceita até 100 por bloco
+
+/** Texto da ficha (callout 🎫): rótulos em negrito, uma informação por linha. Reescrito a cada mudança. */
+export function textoFicha(i: Item): Trecho[] {
+  const r: Trecho[] = [trecho(`${TITULO_FICHA} · ${i.protocolo}`, { bold: true }), trecho('  (atualizada pela Central; anote abaixo da descrição)\n', { italic: true, color: 'gray' })]
+  for (const [rotulo, valor] of i.ficha ?? []) r.push(trecho(`${rotulo}: `, { bold: true }), trecho(`${valor}\n`))
+  if (i.link) r.push(trecho('Abrir na Central ↗', { bold: true }, i.link))
+  else if (r.length) r[r.length - 1].text.content = r[r.length - 1].text.content.replace(/\n$/, '')
+  return r
+}
+
+/** Texto do histórico (callout 🕘): data em negrito e o que aconteceu; mostra os últimos 40. */
+export function textoHistorico(i: Item): Trecho[] {
+  const h = i.historico ?? []
+  const r: Trecho[] = [trecho(TITULO_HISTORICO, { bold: true })]
+  if (h.length > MAX_HISTORICO) r.push(trecho(`  (últimos ${MAX_HISTORICO} de ${h.length})`, { italic: true, color: 'gray' }))
+  for (const [quando, oque] of h.slice(-MAX_HISTORICO)) r.push(trecho(`\n${quando}  `, { bold: true }), trecho(oque))
+  if (!h.length) r.push(trecho('\nSem movimentações ainda.'))
+  return r
+}
+
+export const calloutFicha = (i: Item) => ({ object: 'block', type: 'callout', callout: { icon: { type: 'emoji', emoji: '🎫' }, color: 'blue_background', rich_text: textoFicha(i) } })
+export const calloutHistorico = (i: Item) => ({ object: 'block', type: 'callout', callout: { icon: { type: 'emoji', emoji: '🕘' }, color: 'gray_background', rich_text: textoHistorico(i) } })
+
+/** Corpo da página na criação: ficha, histórico e a descrição escrita por quem abriu (prints ficam só na Central). */
 export function blocos(i: Item): unknown[] {
   const b: unknown[] = [
-    {
-      object: 'block', type: 'callout',
-      callout: {
-        icon: { type: 'emoji', emoji: '🎫' },
-        rich_text: texto(`${i.protocolo} · ${i.sistema ?? 'Sistema'} · ${i.urgencia}. Criado pela Central de Chamados: o status, o responsável e a conclusão são atualizados automaticamente.`),
-      },
-    },
+    calloutFicha(i),
+    calloutHistorico(i),
     { object: 'block', type: 'heading_3', heading_3: { rich_text: texto('Descrição do chamado') } },
   ]
   for (const linha of (i.descricao ?? '').split(/\n{2,}/)) for (const p of pedacos(linha)) b.push(paragrafo(p))
-  if (b.length === 2) b.push(paragrafo('(sem descrição)'))
+  if (b.length === 3) b.push(paragrafo('(sem descrição)'))
   return b.slice(0, 95) // limite da API: 100 blocos por chamada
 }

@@ -49,6 +49,7 @@ Colaboradores abrem chamados quando um sistema dá problema; o time de desenvolv
   A coluna "Equipe" (multi-seleção = responsável + contribuintes, preenchida pela Central e acertada a cada 2 min quando alguém muda as pessoas direto no Notion) agrupa o quadro "Equipe · por pessoa": o cartão aparece na coluna de cada um. Quadros mostram só o que está aberto; o concluído fica na aba "✅ Concluídas".
   Só chamados assumidos depois de ligar (`configuracao.notion_ativo`). Motor: gatilho `notion_sync` em `eventos` → fila `notion_envios`
   → `notion_disparar()` (pg_net; retentativa no `push_agendar`) → Edge Function `chamados-notion` (token só no segredo `NOTION_TOKEN` da função).
+  A página de cada chamado abre com a **Ficha do chamado** (🎫: tipo, urgência, solicitante, origem, responsável e contribuintes com data, prazos com no prazo/atraso, justificativa, link) e o **Histórico** (🕘), reescritos a cada mudança; anotações do time ficam abaixo da descrição.
   O Painel mostra "Notion ↗" na linha do chamado.
 - Fluxo novo usado pela gamificação: **avaliação** (1–5 estrelas + elogio) com código secreto gerado na abertura sem login (link "avaliar depois"), **pedir ajuda** a colega (entra direto como contribuinte, sem aceite), **justificar atraso**, **reabrir com motivo** (não estava resolvido / voltou / outro).
 

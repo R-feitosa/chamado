@@ -110,6 +110,12 @@ set role service_role;
 select pg_temp.checa((select e->'contribuintes' from jsonb_array_elements(chamados.notion_lote(pg_temp.v('seg'))->'itens') e
   where e->>'protocolo' = pg_temp.v('p2')) = '["ALDO"]'::jsonb, 'ajuda aparece no Notion sem aceite');
 reset role;
+-- Ficha e histórico da página do Notion com mais de uma pessoa no chamado.
+select pg_temp.checa((select f->>1 from jsonb_array_elements(chamados.notion_item(pg_temp.ch2())->'ficha') f where f->>0 = 'Contribuintes') like 'Aldo Júnior (desde %)', 'ficha lista o contribuinte e desde quando');
+select pg_temp.checa((select f->>1 from jsonb_array_elements(chamados.notion_item(pg_temp.ch2())->'ficha') f where f->>0 = 'Responsável') like 'Kaio · assumiu em %', 'ficha mostra o responsável');
+select pg_temp.checa((select f->>1 from jsonb_array_elements(chamados.notion_item(pg_temp.ch2())->'ficha') f where f->>0 = 'Prazo para assumir') like '%✅ assumido no prazo', 'ficha diz se assumiu no prazo');
+select pg_temp.checa(exists (select 1 from jsonb_array_elements(chamados.notion_item(pg_temp.ch2())->'historico') h where h->>1 = 'Aldo Júnior entrou como contribuinte'), 'histórico registra a entrada do contribuinte');
+select pg_temp.checa((chamados.notion_item(pg_temp.ch2())->'historico'->0->>1) = 'Chamado aberto', 'histórico começa na abertura');
 -- Tela antiga: "Vou ajudar" não quebra; "Recusar" = sair do chamado.
 set role authenticated; select pg_temp.como('00000000-0000-0000-0000-00000000000c');
 select chamados.responder_ajuda((select id from chamados.colaboracoes where chamado_id = pg_temp.ch2()), true);
