@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { adicionarContribuinte, agir, desassumir, justificarAtraso, listarColaboracoes, MOTIVOS_REABERTURA, reabrir, removerContribuinte, responderAjuda, type Acao, type Colaboracao, type MotivoReabertura } from '../lib/api';
+import { adicionarContribuinte, agir, assumirJunto, desassumir, justificarAtraso, listarColaboracoes, MOTIVOS_REABERTURA, reabrir, removerContribuinte, responderAjuda, type Acao, type Colaboracao, type MotivoReabertura } from '../lib/api';
 import { FILTROS, indicadores, noFiltro, ordenar, quemAbriu, type Filtro } from '../lib/fila';
 import { duracao, inicioDoPeriodo, resolvidosNoPeriodo, tempoDaFila, temposMedios } from '../lib/analytics';
 import { formatoPct, situacaoPrazo, taxaAssumidoNoPrazo, taxaNoPrazo, textoPrazo } from '../lib/sla';
@@ -190,6 +190,11 @@ export function Painel({ eu, catalogo, chamados, onAcao, gestor = false }: Props
   const t30 = temposMedios(chamados, desde30);
   const lista = ordenar(chamados.filter((c) => noFiltro(filtro, c, eu.id)));
 
+  async function entrarJunto(id: string) {
+    setOcupado(id); setErro('');
+    try { await assumirJunto(id); carregarColabs(); onAcao?.(); } catch (e) { setErro(mensagemErro(e)); } finally { setOcupado(null); }
+  }
+
   async function executar(acao: Acao, id: string) {
     setOcupado(id); setErro('');
     try { await agir(acao, id); onAcao?.(); } catch (e) { setErro(mensagemErro(e)); } finally { setOcupado(null); }
@@ -289,6 +294,12 @@ export function Painel({ eu, catalogo, chamados, onAcao, gestor = false }: Props
                     </div>
                     {res && !gestor && <button className="mini" type="button" disabled={bloqueado} onClick={() => setDialogo({ tipo: 'reabrir', c })}>Reabrir</button>}
                     {!res && resp.id === eu.id && <button className="mini" type="button" disabled={bloqueado} onClick={() => executar('resolver', c.id)}>Resolver</button>}
+                    {!res && !gestor && eu.papel === 'dev' && resp.id !== eu.id
+                      && !colabs.some((x) => x.chamado_id === c.id && x.ajudante_id === eu.id && x.status === 'confirmada')
+                      && colabs.filter((x) => x.chamado_id === c.id && x.status === 'confirmada').length < 2 && (
+                      <button className="mini go" type="button" disabled={bloqueado} title="Entrar neste chamado junto com o responsável (até 3 pessoas)"
+                        onClick={() => void entrarJunto(c.id)}>Assumir junto</button>
+                    )}
                     {!res && (resp.id === eu.id || gestor || colabs.some((x) => x.chamado_id === c.id && x.ajudante_id === eu.id && x.status === 'confirmada')) && (
                       <button className="mini" type="button" title="Adicionar ou remover quem trabalha junto (até 3 pessoas)" onClick={() => setDialogo({ tipo: 'contribuintes', c })}>
                         Contribuintes{colabs.some((x) => x.chamado_id === c.id && x.status === 'confirmada') ? ` (${colabs.filter((x) => x.chamado_id === c.id && x.status === 'confirmada').length})` : ''}</button>

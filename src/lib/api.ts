@@ -155,6 +155,12 @@ export async function adicionarContribuinte(chamado: string, pessoa: string): Pr
   if (error) throw error;
 }
 
+/** Entra num chamado que já tem responsável, como contribuinte (até 3 pessoas). */
+export async function assumirJunto(chamado: string): Promise<void> {
+  const { error } = await supabase.rpc('assumir_junto', { p_chamado: chamado });
+  if (error) throw error;
+}
+
 export async function removerContribuinte(chamado: string, pessoa: string): Promise<void> {
   const { error } = await supabase.rpc('remover_contribuinte', { p_chamado: chamado, p_pessoa: pessoa });
   if (error) throw error;

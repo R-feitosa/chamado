@@ -182,3 +182,5 @@ validação por 72 h, Performance Score composto, antiabuso com revisão do gest
 - Painel: botão "Contribuintes (n)" para responsável, gestor e quem contribui; a linha mostra "Contribuintes: …".
 - "Ajuda" sem aceite (migration `20261119160000_ajuda_sem_aceite.sql`, aplicada): `pedir_ajuda` chama `adicionar_contribuinte`, então o colega entra confirmado e vai na hora para o Notion. `responder_ajuda` ficou por compatibilidade (aceitar o que já entrou não faz nada; recusar = sair). Pedidos pendentes em chamados em andamento foram confirmados; o de TI-0457 (já resolvido) ficou como estava.
 
+
+- "Assumir junto" (26/11; migration `20261126120000_assumir_junto.sql`): botão para qualquer dev (não o gestor) em chamado com responsável, em andamento e com vaga; entra como contribuinte (passa por "pedida" → "confirmada", então gamificação e Notion funcionam igual). Testes na seção 9 de `contribuintes.sql`.

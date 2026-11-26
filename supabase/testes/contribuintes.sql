@@ -123,6 +123,29 @@ select chamados.responder_ajuda((select id from chamados.colaboracoes where cham
 reset role;
 select pg_temp.checa((select status::text from chamados.colaboracoes where chamado_id = pg_temp.ch2()) = 'recusada', 'recusar = sair');
 
+-- 9. "Assumir junto": dev entra sozinho num chamado que já tem responsável.
+set role anon; select pg_temp.como('');
+insert into x select 'p3', chamados.abrir_chamado_publico(4, null, 'Pessoa Junto', 'Analista', 1, 'Sistema lento', 1)->>'protocolo';
+reset role;
+create function pg_temp.ch3() returns uuid language sql security definer as $f$ select id from chamados.chamados where protocolo = (select valor from x where chave = 'p3') $f$;
+grant execute on function pg_temp.ch3() to authenticated;
+set role authenticated; select pg_temp.como('00000000-0000-0000-0000-00000000000c');
+select pg_temp.falha('select chamados.assumir_junto(pg_temp.ch3())', 'use "Assumir"');
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select chamados.assumir_chamado(pg_temp.ch3());
+select pg_temp.falha('select chamados.assumir_junto(pg_temp.ch3())', 'Você já é o responsável');
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select pg_temp.falha('select chamados.assumir_junto(pg_temp.ch3())', 'Só o time de desenvolvimento');
+select pg_temp.como('00000000-0000-0000-0000-00000000000c');
+select chamados.assumir_junto(pg_temp.ch3());
+select pg_temp.falha('select chamados.assumir_junto(pg_temp.ch3())', 'Você já está neste chamado');
+reset role;
+select pg_temp.checa((select status::text from chamados.colaboracoes where chamado_id = pg_temp.ch3() and ajudante_id = pg_temp.pid('Aldo Júnior')) = 'confirmada', 'assumiu junto como contribuinte');
+select pg_temp.checa((select responsavel_id from chamados.chamados where id = pg_temp.ch3()) = pg_temp.pid('Kaio'), 'responsável continua o mesmo');
+set role anon; select pg_temp.como('');
+select pg_temp.falha('select chamados.assumir_junto(pg_temp.ch3())', 'permission denied');
+reset role;
+
 -- 8. Agendador chama o Notion a cada 2 min mesmo sem fila (acerta a "Equipe" editada direto no Notion).
 select pg_temp.checa(position('% 2 = 0 or exists' in pg_get_functiondef('chamados.push_agendar()'::regprocedure)) > 0, 'agendador chama o Notion a cada 2 min');
 select chamados.push_agendar();
